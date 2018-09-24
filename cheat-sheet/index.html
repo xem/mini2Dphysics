@@ -1,9 +1,11 @@
 ﻿<style>
 * { font-family: arial; }
 body { width: 800px; margin: 20px auto; font-size: 14px; }
-h1 { text-align: center; margin: 0; }
-h3 { margin: 0; }
-div { text-align: left; border-radius: 5px; border: 2px solid #abf; padding: 10px; margin: 10px; position: relative;  }
+h1 { text-align: center; }
+h3 {  }
+div { text-align: left; border-radius: 5px; border: 2px solid #abf; padding: 0 10px 10px; margin: 10px; position: relative;  }
+div div { border-color: #fab; }
+div div div { border-color: #fbf; }
 p { margin: 10px 0; }
 span.overline { text-decoration: overline }
 span.comment { color: #888; font-size: 13px; }
@@ -91,6 +93,7 @@ a { color: #45d; }
   <h3>Collision detection</h3>
   <p>When the scene contains two or more rigid shapes, the collisions must be tested between every pair of shapes, A and B.
   
+  <div>
   <h4>I. Broad phase method</h4>
   <p>First, quickly determine if the shapes are far away from each other by testing if their bounding circles intersect:
   <br>If <b>dist(c<sub>1</sub>, c<sub>2</sub>) > br<sub>1</sub> + br<sub>2</sub></b>, the shapes don't intersect.
@@ -98,7 +101,12 @@ a { color: #45d; }
 
   <p>TO COMPLETE.
   
+  </div>
+  
+  <div>
   <h4>II. Narrow phase methods</h4>
+  
+  <div>
   
   <h5>a. Circle vs circle</h5>
   
@@ -121,6 +129,10 @@ a { color: #45d; }
   
   <p>TO COMPLETE.
   
+  </div>
+  
+  <div>
+  
   <h5>b. Rectangle vs rectangle</h5>
   <p>The Separating Axis Theorem is used to detect collisions between two polygons. Here's an efficient algorithm:
   
@@ -140,15 +152,30 @@ a { color: #45d; }
   
   <p>TO COMPLETE.
   
+  </div>
+  
+  <div>
+  
   <h5>c. Rectangle vs circle</h5>
   
-  <p>
+  <p>Each edge of the rectangle is surrounded by three areas.
+  <br>- If the circle's center is in the top/left area, there's a collision if dist(c<sub>rect</sub>, top/left vertex) < r.
+  <br>- If the circle's center is in the bottom/right area, there's a collision if dist(c<sub>rect</sub>, bottom/right vertex) < r.
+  <br>- Else, the circle's center is in front of the face, and there's a collision if dist(c<sub>rect</sub>, face) < r.
+    
+  <p>TO COMPLETE.
   
+  </div>
+  </div>
+  
+  <div>
   <h4>III. Ensure the collision normal points towards the tested object.</h4>
   <p>if dot(normal, sub(c<sub>B</sub>, c<sub>A</sub>)) < 0
   <br>→ normal = normal.scale(-1)
   <br>→ start = end
   <br>→ end = start
   
+  <p>TO COMPLETE.
+  </div>
   
 </div>
