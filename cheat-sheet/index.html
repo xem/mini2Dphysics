@@ -1,0 +1,87 @@
+﻿<style>
+* { font-family: arial; }
+body { width: 800px; margin: 20px auto; font-size: 14px; }
+h1 { text-align: center; margin: 0; }
+h3 { margin: 0; }
+div { text-align: left; border-radius: 5px; border: 2px solid #abf; padding: 10px; margin: 10px; position: relative;  }
+p { margin: 10px 0; }
+span.overline { text-decoration: overline }
+span.comment { color: #888; font-size: 13px; }
+span.brace { font-size: 22px }
+sub { font-size: 10px }
+td { line-height: 16px; padding: 5px; } 
+a { color: #45d; }
+
+.shapes table {  }
+.shapes td { vertical-align: top; padding: 5px 5px 5px 0; line-height: 20px; }
+.shapes img { display: block; margin: 0 auto }
+
+</style>
+
+<h1>2D physics cheat sheet</h1>
+<center>(Inspired by <a href="https://www.apress.com/la/book/9781484225820">this book</a> and <a href="https://gamedevelopment.tutsplus.com/series/how-to-create-a-custom-physics-engine--gamedev-12715">this tutorial</a>)
+
+<div class=vectors>
+  <h3>2D vectors</h3>
+  <p>Structures containing 2 values [x, y], and representing either a point's coordinates, a force, or a normal.</p>
+  <img src=vec2.png style=position:absolute;left:400px;top:80px width=250>
+  <table>
+  <tr><td>→ <b>length(V)</b><td> = <td>√<span class=overline>x² + y²</span>
+  <tr><td>→ <b>add(V<sub>1</sub>, V<sub>2</sub>)</b><td> = <td>[x<sub>1</sub> + x<sub>2</sub>, y<sub>1</sub> + y<sub>2</sub>]
+  <tr><td>→ <b>sub(V<sub>1</sub>, V<sub>2</sub>)</b><td> = <td>[x<sub>1</sub> - x<sub>2</sub>, y<sub>1</sub> - y<sub>2</sub>]
+  <tr><td>→ <b>scale(V, n)</b><td> = <td>[x * n, y * n]
+  <tr><td>→ <b>dist(V<sub>1</sub>, V<sub>2</sub>)</b><td> = <td>√<span class=overline>(x<sub>2</sub> - x<sub>1</sub>)² + (y<sub>2</sub> - y<sub>1</sub>)²</span>
+  <tr><td>→ <b><a href="https://en.wikipedia.org/wiki/Dot_product">dot</a>(V<sub>1</sub>, V<sub>2</sub>)</b><td> = <td>x<sub>1</sub> * x<sub>2</sub> + y<sub>1</sub> * y<sub>2</sub>
+  <tr><td>→ <b><a href="https://en.wikipedia.org/wiki/Cross_product">cross</a>(V<sub>1</sub>, V<sub>2</sub>)</b><td> = <td>x<sub>1</sub> * y<sub>2</sub> - y<sub>1</sub> * x<sub>2</sub>
+  <tr><td>→ <b>rotate(V,C,α)</b><td> = <td>[(x<sub>1</sub> - x<sub>c</sub>) * cos(α) - (y<sub>1</sub> - y<sub>c</sub>) * sin(α) + x<sub>c</sub>, (x<sub>1</sub> - x<sub>c</sub>) * sin(α) + (y<sub>1</sub> - y<sub>c</sub>) * cos(α) + y<sub>c</sub>] 
+  <tr><td>→ <b>normalize(V)</b><td> = <td><span class=brace>⎰</span> length(V) = 0 → [0, 0]<br><span class=brace>⎱</span> length(V) > 0 → [x + 1 / length(V), y + 1 / length(V)]
+  </table>
+</div>
+
+<div class=shapes>
+  <h3>Rigid shapes</h3>
+  <table>
+  <tr>
+  <td width=180>
+    <b>Circle</b>
+    <br>→ center (vec2) : c
+    <br>→ angle (float) : α
+    <br>→ fixed (boolean)
+    <br>→ radius (float): r
+    <br>→ boundRadius: br = r
+  <td width=280>
+    <b>Rectangle</b>
+    <br>→ center (vec2) : c
+    <br>→ angle (float) : α
+    <br>→ fixed (boolean)
+    <br>→ width (float): w
+    <br>→ height (float): h
+    <br>→ vertex (vec2*) : [v<sub>0</sub>, v<sub>1</sub>, v<sub>2</sub>, v<sub>3</sub>]
+    <br>→ normal (vec2*): [n<sub>0</sub>, n<sub>1</sub>, n<sub>2</sub>, n<sub>3</sub>]
+    <br>→ boundRadius: br = dist(c, v0)
+  <td>
+    <b>Polygon</b>
+    <br>→ center (vec2) : c
+    <br>→ angle (float) : α
+    <br>→ fixed (boolean)
+    <br>→ vertex (vec2*) : [v<sub>0</sub>, v<sub>1</sub>, v<sub>2</sub>, v<sub>3</sub>, ...]
+    <br>→ normal (vec2*): [n<sub>0</sub>, n<sub>1</sub>, n<sub>2</sub>, n<sub>3</sub>, ...]
+    <br>→ boundRadius: br = max dist(v<sub>n</sub>, c)
+  <tr>
+  <td>
+    <img src=circle.png width=150>
+  <td>
+    <img src=rect.png width=260>
+  <td>
+    <img src=polygon.png width=220>
+  
+  </table>
+</div>
+
+<div class=collision>
+  <h3>Collision detection</h3>
+  <h4>I. Broad phase method</h4>
+  <p>Only test collisions between a pair of shapes if their bounding circles intersect, i.e. if dist(c<sub>1</sub>, c<sub>2</sub>) < br<sub>1</sub> + br<sub>2</sub>. 
+  
+  
+</div>
