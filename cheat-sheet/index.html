@@ -16,6 +16,8 @@ a { color: #45d; }
 .shapes td { vertical-align: top; padding: 5px 5px 5px 0; line-height: 20px; }
 .shapes img { display: block; margin: 0 auto }
 
+.collision td { padding: 10px 20px 10px 10px }
+
 </style>
 
 <h1>2D physics cheat sheet</h1>
@@ -69,7 +71,7 @@ a { color: #45d; }
     <br>→ boundRadius: br = max dist(v<sub>n</sub>, c)
   <tr>
   <td>
-    <img src=circle.png width=150>
+    <img src=circle.png width=170>
   <td>
     <img src=rect.png width=260>
   <td>
@@ -79,9 +81,74 @@ a { color: #45d; }
 </div>
 
 <div class=collision>
+
+  <h3>Collision information</h3>
+  <p>→ depth: integer
+  <br>→ normal: vec2
+  <br>→ start: vec2
+  <br>→ end: vec2
+
   <h3>Collision detection</h3>
+  <p>When the scene contains two or more rigid shapes, the collisions must be tested between every pair of shapes, A and B.
+  
   <h4>I. Broad phase method</h4>
-  <p>Only test collisions between a pair of shapes if their bounding circles intersect, i.e. if dist(c<sub>1</sub>, c<sub>2</sub>) < br<sub>1</sub> + br<sub>2</sub>. 
+  <p>First, quickly determine if the shapes are far away from each other by testing if their bounding circles intersect:
+  <br>If <b>dist(c<sub>1</sub>, c<sub>2</sub>) > br<sub>1</sub> + br<sub>2</sub></b>, the shapes don't intersect.
+  <br>If the bounding circles intersect, use the narrow phase methods.
+
+  <p>TO COMPLETE.
+  
+  <h4>II. Narrow phase methods</h4>
+  
+  <h5>a. Circle vs circle</h5>
+  
+  <p>
+  <table>
+  <tr><td style="border-right: 1px solid #888">
+  <b>If c<sub>A</sub> and c<sub>B</sub> are mingled:</b>
+  <br>→ depth = max(r<sub>1</sub>, r<sub>2</sub>)
+  <br>→ start = c<sub>A</sub>
+  <br>→ end = c<sub>B</sub>
+  <br>→ normal = [0, 1]
+  
+  <td>
+  <b>If c<sub>A</sub> and c<sub>B</sub> are different:</b>
+  <br>→ depth = dist(c<sub>1</sub>, c<sub>2</sub>) - (r<sub>1</sub> + r<sub>2</sub>)
+  <br>→ start = c<sub>A</sub>
+  <br>→ end = c<sub>B</sub>
+  <br>→ normal = c<sub>B</sub> - c<sub>A</sub>
+  </table>
+  
+  <p>TO COMPLETE.
+  
+  <h5>b. Rectangle vs rectangle</h5>
+  <p>The Separating Axis Theorem is used to detect collisions between two polygons. Here's an efficient algorithm:
+  
+  <p>- for each face normal of A, search its "support point": the vertex of B that has the biggest "negative distance" from the current face of A.
+  <p>- If a face of A has no support point, then all the points of B are in front of the face and the two shapes don't collide and the algorithm can stop here.
+  <p>- the distance between a face and its support point is positive, and called "support point distance".
+  <p>- The face with the smallest support point distance is the face with the least penetration.
+  <p><b>collision<sub>AB</sub>:</b>
+  <br>→ depth = support point distance
+  <br>→ normal = normal face of A that has the smallest support point distance.
+  <br>→ start: support point
+  <br>→ end: support point + scale(normal, depth)
+  
+  <p>- Repeat this algorithm for each face of B vs each vertex of A, to obtain <b>collision<sub>BA</sub></b>
+  
+  <p>- Keep the collision that has the smallest depth 
+  
+  <p>TO COMPLETE.
+  
+  <h5>c. Rectangle vs circle</h5>
+  
+  <p>
+  
+  <h4>III. Ensure the collision normal points towards the tested object.</h4>
+  <p>if dot(normal, sub(c<sub>B</sub>, c<sub>A</sub>)) < 0
+  <br>→ normal = normal.scale(-1)
+  <br>→ start = end
+  <br>→ end = start
   
   
 </div>
