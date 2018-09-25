@@ -1,9 +1,9 @@
 ﻿<style>
 * { font-family: arial; }
-body { width: 800px; margin: 20px auto; font-size: 14px; }
+body { width: 820px; margin: 20px auto; font-size: 14px; }
 h1 { text-align: center; }
 h3 {  }
-div { text-align: left; border-radius: 5px; border: 2px solid #abf; padding: 0 10px 10px; margin: 10px; position: relative;  }
+div { text-align: left; border-radius: 5px; border: 2px solid #abf; padding: 0 10px 10px; margin: 0 0 10px; position: relative;  }
 div div { border-color: #fab; }
 div div div { border-color: #fbf; }
 p { margin: 10px 0; }
@@ -13,18 +13,20 @@ span.brace { font-size: 22px }
 sub { font-size: 10px }
 td { line-height: 16px; padding: 5px; } 
 a { color: #45d; }
-
+ul { padding-left: 20px }
 .shapes table {  }
 .shapes td { vertical-align: top; padding: 5px 5px 5px 0; line-height: 20px; }
 .shapes img { display: block; margin: 0 auto }
 
-.collision td { padding: 10px 20px 10px 10px }
+
+.collision td { width: 50%; padding: 0 20px 5px 10px; vertical-align: top; line-height: 20px; }
+.collision span.brace { font-size: 30px; line-height: 17px; }
 
 </style>
 
 <h1>2D physics cheat sheet</h1>
 <center>(Inspired by <a href="https://www.apress.com/la/book/9781484225820">this book</a> and <a href="https://gamedevelopment.tutsplus.com/series/how-to-create-a-custom-physics-engine--gamedev-12715">this tutorial</a>)
-
+<p>
 <div class=vectors>
   <h3>2D vectors</h3>
   <p>Structures containing 2 values [x, y], and representing either a point's coordinates, a force, or a normal.</p>
@@ -61,7 +63,7 @@ a { color: #45d; }
     <br>→ width (float): w
     <br>→ height (float): h
     <br>→ vertex (vec2*) : [v<sub>0</sub>, v<sub>1</sub>, v<sub>2</sub>, v<sub>3</sub>]
-    <br>→ normal (vec2*): [n<sub>0</sub>, n<sub>1</sub>, n<sub>2</sub>, n<sub>3</sub>]
+    <br>→ normals (vec2*): [n<sub>0</sub>, n<sub>1</sub>, n<sub>2</sub>, n<sub>3</sub>]
     <br>→ boundRadius: br = dist(c, v0)
   <td>
     <b>Polygon</b>
@@ -69,7 +71,7 @@ a { color: #45d; }
     <br>→ angle (float) : α
     <br>→ fixed (boolean)
     <br>→ vertex (vec2*) : [v<sub>0</sub>, v<sub>1</sub>, v<sub>2</sub>, v<sub>3</sub>, ...]
-    <br>→ normal (vec2*): [n<sub>0</sub>, n<sub>1</sub>, n<sub>2</sub>, n<sub>3</sub>, ...]
+    <br>→ normals (vec2*): [n<sub>0</sub>, n<sub>1</sub>, n<sub>2</sub>, n<sub>3</sub>, ...]
     <br>→ boundRadius: br = max dist(v<sub>n</sub>, c)
   <tr>
   <td>
@@ -85,21 +87,39 @@ a { color: #45d; }
 <div class=collision>
 
   <h3>Collision information</h3>
-  <p>→ depth: integer
+  
+  <table>
+  <tr><td style="border-right:1px solid #888">
+  <p>Collisions are tested between all pairs of shapes (A and B), and these variables are computed:
+  <p><b>collision<sub>AtoB</sub></b>
+  <br>→ depth: integer
   <br>→ normal: vec2
   <br>→ start: vec2
-  <br>→ end: vec2
+  <br>→ end = sum(start, scale(normal, depth)) 
 
-  <h3>Collision detection</h3>
-  <p>When the scene contains two or more rigid shapes, the collisions must be tested between every pair of shapes, A and B.
+  <td>
+  <p>The opposite collision from B to A can be deduced easily:
+  <p><b>collision<sub>BtoA</sub></b>
+  <br>→ depth: collision<sub>AtoB</sub>.length
+  <br>→ normal: scale(collision<sub>AtoB</sub>, -1)
+  <br>→ start: collision<sub>AtoB</sub>.end
+  <br>→ end: collision<sub>AtoB</sub>.start
   
+  </table>
+  
+  <h3>Collision detection</h3>
   <div>
   <h4>I. Broad phase method</h4>
-  <p>First, quickly determine if the shapes are far away from each other by testing if their bounding circles intersect:
-  <br>If <b>dist(c<sub>1</sub>, c<sub>2</sub>) > br<sub>1</sub> + br<sub>2</sub></b>, the shapes don't intersect.
-  <br>If the bounding circles intersect, use the narrow phase methods.
-
-  <p>TO COMPLETE.
+  <p>First, quickly determine if the shapes are far away by testing if their bounding circles intersect:
+  
+  <p>
+  
+  <span class=brace>⎰</span> <b>dist(c<sub>A</sub>, c<sub>B</sub>) > br<sub>A</sub> + br<sub>B</sub></b> → the shapes don't intersect.
+  
+  <br>
+  
+  <span class=brace>⎱</span> <b>dist(c<sub>A</sub>, c<sub>B</sub>) < br<sub>A</sub> + br<sub>B</sub></b> → the bounding circles intersect, use the narrow phase methods below.
+  </table>
   
   </div>
   
@@ -108,74 +128,102 @@ a { color: #45d; }
   
   <div>
   
-  <h5>a. Circle vs circle</h5>
+  <h4>a. Circle vs circle</h4>
   
   <p>
   <table>
-  <tr><td style="border-right: 1px solid #888">
-  <b>If c<sub>A</sub> and c<sub>B</sub> are mingled:</b>
-  <br>→ depth = max(r<sub>1</sub>, r<sub>2</sub>)
-  <br>→ start = c<sub>A</sub>
-  <br>→ end = c<sub>B</sub>
-  <br>→ normal = [0, 1]
+  <tr><td style="border-right: 1px solid #888;width:54%">
+  
+  <b>If c<sub>A</sub> and c<sub>B</sub> are different:</b>
+  <br>→ depth = (r<sub>A</sub> + r<sub>B</sub>) - dist(c<sub>A</sub>, c<sub>B</sub>) 
+  <br>→ normal = normalize(sub(c<sub>B</sub>, c<sub>A</sub>))
+  <br>→ start = add(c<sub>B</sub>, normalize(scale(sub(c<sub>B</sub>, c<sub>A</sub>), -1)))
   
   <td>
-  <b>If c<sub>A</sub> and c<sub>B</sub> are different:</b>
-  <br>→ depth = dist(c<sub>1</sub>, c<sub>2</sub>) - (r<sub>1</sub> + r<sub>2</sub>)
-  <br>→ start = c<sub>A</sub>
-  <br>→ end = c<sub>B</sub>
-  <br>→ normal = c<sub>B</sub> - c<sub>A</sub>
-  </table>
+  <b>If c<sub>A</sub> and c<sub>B</sub> are on the same coordinates:</b>
+  <br>→ depth = max(r<sub>A</sub>, r<sub>B</sub>)
+  <br>→ normal = [0,-1]
+  <br>
   
-  <p>TO COMPLETE.
+  <div style="display:inline-block;border:none;vertical-align:middle;padding:0">→ start = 
+  </div>
+  
+  <div style="display:inline-block;border:none;vertical-align:middle;padding: 5px 0">
+  
+  <span class=brace>⎰</span> r<sub>A</sub> > r<sub>B</sub> → c<sub>A</sub> + [0, r<sub>B</sub>]
+  
+  <br>
+  
+  <span class=brace>⎱</span> r<sub>B</sub> > r<sub>A</sub> → c<sub>B</sub> + [0, r<sub>B</sub>]
+  </div>
+  
+  </table>
   
   </div>
   
   <div>
   
-  <h5>b. Rectangle vs rectangle</h5>
+  <h4>b. Rectangle vs rectangle</h4>
   <p>The Separating Axis Theorem is used to detect collisions between two polygons. Here's an efficient algorithm:
   
-  <p>- for each face normal of A, search its "support point": the vertex of B that has the biggest "negative distance" from the current face of A.
-  <p>- If a face of A has no support point, then all the points of B are in front of the face and the two shapes don't collide and the algorithm can stop here.
-  <p>- the distance between a face and its support point is positive, and called "support point distance".
-  <p>- The face with the smallest support point distance is the face with the least penetration.
-  <p><b>collision<sub>AB</sub>:</b>
-  <br>→ depth = support point distance
-  <br>→ normal = normal face of A that has the smallest support point distance.
+  <p>For each face normal of A:
+  <ul>
+  <li>Search a "support point" in B (the vertex of B that has the biggest "negative distance" from the current face of A)
+  <li>If a face of A has no support point, then the two shapes don't collide and the algorithm can stop here.
+  <li>The (positive) distance between a face and its support point is called "support point distance", or spd.
+  <p><b>tempCollision<sub>AB</sub></b>
+  <br>→ depth = spd
+  <br>→ normal = normal face of A that has the smallest spd
   <br>→ start: support point
   <br>→ end: support point + scale(normal, depth)
   
-  <p>- Repeat this algorithm for each face of B vs each vertex of A, to obtain <b>collision<sub>BA</sub></b>
+  <li>Repeat this algorithm for each face normal of B versus A, to obtain <b>tempCollision<sub>BtoA</sub></b>.
   
-  <p>- Keep the collision that has the smallest depth 
-  
-  <p>TO COMPLETE.
+  <li>The final <b>collision<sub>AtoB / BtoA</sub></b> object is the tempCollision that has the smallest depth.
+  </ul>
   
   </div>
   
   <div>
   
-  <h5>c. Rectangle vs circle</h5>
+  <h4>c. Rectangle vs circle</h4>
   
-  <p>Each edge of the rectangle is surrounded by three areas.
-  <br>- If the circle's center is in the top/left area, there's a collision if dist(c<sub>rect</sub>, top/left vertex) < r.
-  <br>- If the circle's center is in the bottom/right area, there's a collision if dist(c<sub>rect</sub>, bottom/right vertex) < r.
-  <br>- Else, the circle's center is in front of the face, and there's a collision if dist(c<sub>rect</sub>, face) < r.
+  <ul>
+  <li>Project the circle center cB on every face normal: <b>P<sub>i</sub> = dot(c<sub>B</sub> - A.vertex[i], A.normal[i])</b>.
+  <li>If all P<sub>i</sub> are negative, c<sub>B</sub> is inside A, v<sub>closest</sub> is the vertex v[i] where P<sub>i</sub> is closest to 0, and collision<sub>AtoB</sub> is defined as:
+  <br>→ depth = dist(v<sub>closest</sub>, c<sub>B</sub>) (?)
+  <br>→ normal = c<sub>B</sub> - v<sub>closest</sub> (?)
+  <br>→ start: v<sub>closest</sub> (?)
+  <li>If not all P<sub>i</sub> are negative, c<sub>B</sub> is outside A, v<sub>closest</sub> is the vertex v[i] where P<sub>i</sub> is positive and closest to 0.
+  <li>The i'th face of A is surrounded by 3 regions:
+  <ul>
+    <li>V1 = cB - v<sub>closest</sub>
+    <br>V2 = A.vertex[(i<sub>closest</sub> + 1) % 4] - v<sub>closest</sub>
+    <br>dot = dot(V1, V2)
+    <br><b>Region 1:</b>
+    <br>if dot < 0: collision if length(V1) > r<sub>B</sub> (otherwise, no collision)
+    <br>→ depth = r<sub>B</sub> - length(V1)
+    <br>→ normal = normalize(V1)
+    <br>→ start = c<sub>B</sub> + scale(normal, -r<sub>B</sub>)
     
-  <p>TO COMPLETE.
+    <br>else:
+    <br>V1 = c<sub>B</sub> - vertex[(i<sub>closest</sub> + 1) % 4]
+    <br>V2 = v2.scale(-1)
+    <br>dot = dot(V1, V2)
+    <br><b>Region 2:</b>
+    <br>if dot < 0: collision if length(V1) > r<sub>B</sub> (otherwise, no collision)
+    <br>→ depth = r<sub>B</sub> - length(V1)
+    <br>→ normal = normalize(V1)
+    <br>→ start = c<sub>B</sub> + scale(normal, -r<sub>B</sub>)
+    
+    <br><b>Region 3:</b>
+    <br>else:
+    <br>if P<sub>closest</sub> < r<sub>C</sub>: collision (otherwise, no collision)
+    <br>→ depth = r<sub>B</sub> - P<sub>closest</sub>
+    <br>→ normal = A.normals[i<sub>closest</sub>]
+    <br>→ start = c<sub>B</sub> + scale(normal, r<sub>B</sub>)
   
   </div>
-  </div>
-  
-  <div>
-  <h4>III. Ensure the collision normal points towards the tested object.</h4>
-  <p>if dot(normal, sub(c<sub>B</sub>, c<sub>A</sub>)) < 0
-  <br>→ normal = normal.scale(-1)
-  <br>→ start = end
-  <br>→ end = start
-  
-  <p>TO COMPLETE.
   </div>
   
 </div>
