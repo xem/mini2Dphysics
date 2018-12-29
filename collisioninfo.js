@@ -1,19 +1,13 @@
-setInfo = function (info, d, n, s) {
-  info.mDepth = d;
-  info.mNormal = n;
-  info.mStart = s;
-  info.mEnd = s.add(n.scale(d));
+setInfo = function(info, d, n, s){
+  info.D = d; // depth
+  info.N = n; // normal
+  info.S = s; // start
+  info.E = s.add(n.scale(d)); // end
 };
 
-/**
- * change the direction of normal
- * @memberOf CollisionInfo
- * @returns {void}
- */
-
-/*CollisionInfo.prototype.changeDir = function () {
-  this.mNormal = this.mNormal.scale(-1);
-  var n = this.mStart;
-  this.mStart = this.mEnd;
-  this.mEnd = n;
+/*CollisionInfo.prototype.changeDir = function(){
+  this.N = this.N.scale(-1);
+  var n = this.S;
+  this.S = this.E;
+  this.E = n;
 };*/

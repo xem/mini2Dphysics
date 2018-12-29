@@ -23,10 +23,10 @@ setInterval(
     // Compute collisions
     var i, j, k;
     var collisionInfo = {
-      mDepth: 0,
-      mNormal:new Vec2(0, 0),
-      mStart: new Vec2(0, 0),
-      mEnd: new Vec2(0, 0)
+      D: 0,
+      N: new Vec2(0, 0),
+      S: new Vec2(0, 0),
+      E: new Vec2(0, 0)
     };
     for (k = 0; k < 15; k++){
       for (i = 0; i < objects.length; i++){

@@ -63,7 +63,7 @@ var Circle = function (center, radius, mass, friction, restitution) {
   this.mType = "Circle";
   this.mRadius = radius;
   this.mBoundRadius = radius;
-  this.mStartpoint = new Vec2(center.x, center.y + radius);
+  this.Spoint = new Vec2(center.x, center.y + radius);
   this.updateInertia();
 };
 
@@ -72,7 +72,7 @@ prototype.constructor = Circle;
 Circle.prototype = prototype;
 
 Circle.prototype.move = function (s) {
-  this.mStartpoint = this.mStartpoint.add(s);
+  this.Spoint = this.Spoint.add(s);
   this.mCenter = this.mCenter.add(s);
   return this;
 };
@@ -84,7 +84,7 @@ Circle.prototype.draw = function () {
   c.arc(this.mCenter.x, this.mCenter.y, this.mRadius, 0, Math.PI * 2, true);
 
   // line
-  c.moveTo(this.mStartpoint.x, this.mStartpoint.y);
+  c.moveTo(this.Spoint.x, this.Spoint.y);
   c.lineTo(this.mCenter.x, this.mCenter.y);
   
   c.closePath();
@@ -94,7 +94,7 @@ Circle.prototype.draw = function () {
 //rotate angle in counterclockwise
 Circle.prototype.rotate = function(angle){
   this.mAngle += angle;
-  this.mStartpoint = this.mStartpoint.rotate(this.mCenter, angle);
+  this.Spoint = this.Spoint.rotate(this.mCenter, angle);
   return this;
 };
 
@@ -150,17 +150,17 @@ var resolveCollision = function (s1, s2, collisionInfo) {
   //  correct positions
   var s1InvMass = s1.mInvMass;
   var s2InvMass = s2.mInvMass;
-  var num = collisionInfo.mDepth / (s1InvMass + s2InvMass) * .8; // .8 = poscorrectionrate = percentage of separation to project objects
-  var correctionAmount = collisionInfo.mNormal.scale(num);
+  var num = collisionInfo.D / (s1InvMass + s2InvMass) * .8; // .8 = poscorrectionrate = percentage of separation to project objects
+  var correctionAmount = collisionInfo.N.scale(num);
   s1.move(correctionAmount.scale(-s1InvMass));
   s2.move(correctionAmount.scale(s2InvMass));
   
-  var n = collisionInfo.mNormal;
+  var n = collisionInfo.N;
 
   //the direction of collisionInfo is always from s1 to s2
   //but the Mass is inversed, so start scale with s2 and end scale with s1
-  var start = collisionInfo.mStart.scale(s2.mInvMass / (s1.mInvMass + s2.mInvMass));
-  var end = collisionInfo.mEnd.scale(s1.mInvMass / (s1.mInvMass + s2.mInvMass));
+  var start = collisionInfo.S.scale(s2.mInvMass / (s1.mInvMass + s2.mInvMass));
+  var end = collisionInfo.E.scale(s1.mInvMass / (s1.mInvMass + s2.mInvMass));
   var p = start.add(end);
   //r is vector from center of object to collision point
   var r1 = p.subtract(s1.mCenter);
