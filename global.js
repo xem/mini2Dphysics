@@ -3,6 +3,21 @@ var c = a.getContext('2d')
 var mGravity = Vec2(0, 100);
 var objects = [];
 
+// Collision info helpers
+setInfo = function(info, d, n, s){
+  info.D = d; // depth
+  info.N = n; // normal
+  info.S = s; // start
+  info.E = add(s, scale(n, d)); // end
+};
+
+/*CollisionInfo.prototype.changeDir = function(){
+  this.N = this.N.scale(-1);
+  var n = this.S;
+  this.S = this.E;
+  this.E = n;
+};*/
+
 // Init scene
 new Circle(Vec2(400, 1100), 800, 0, .5, .5);
 for (var i = 0; i < 30; i++) {
