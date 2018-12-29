@@ -9,7 +9,7 @@ var Circle = (C, R, mass, B, IM = mass ? 1 / mass : 0) => {
     I: 0, // inertia
     V: Vec2(0, 0), // velocity (speed)
     IM, // inverseMass (0 if immobile)
-    A: Vec2(0, mass ? 90 : 0), // acceleration
+    A: Vec2(0, mass?90:0), // acceleration
     B, // angle
     D: 0, // angle velocity
     E: 0, // angle acceleration,
@@ -58,9 +58,9 @@ setInterval(
     }
   
     // Compute collisions
-    for(k = 15; k--;){
       for(i = objects.length; i--;){
         for(j = objects.length; j-- > i;){
+    for(k = 15; k--;){
         
           // Test collision
           var c1 = objects[i], c2 = objects[j];
@@ -153,10 +153,7 @@ setInterval(
           }
         }
       }
-    }
-  
-    // Update scene
-    for(i = objects.length; i--; ){
+      // Update scene
       objects[i].V = add(objects[i].V, scale(objects[i].A, .01));
       objects[i].C = add(objects[i].C, scale(objects[i].V, .01));
       objects[i].D += objects[i].E * .01;
