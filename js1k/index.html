@@ -3,18 +3,18 @@
 
 <script>
 
-var Circle = (C, R, mass, B, IM = mass ? 1 / mass : 0) => {
+var Circle = (C, R, mass, B, M = mass ? 1 / mass : 0) => {
   objects.push({
     C, // center
     I: 0, // inertia
     V: Vec2(0, 0), // velocity (speed)
-    IM, // inverseMass (0 if immobile)
-    A: Vec2(0, mass?90:0), // acceleration
+    M, // inverseMass (0 if immobile)
+    A: Vec2(0, mass ? 90 : 0), // acceleration
     B, // angle
     D: 0, // angle velocity
     E: 0, // angle acceleration,
     R, // radius
-    I: IM ? (1 / IM) * (R * R) / 12 : 0   // Inertia=mass * radius^2. 12 is a magic constant that can be changed
+    I: M ? (1 / M) * (R * R) / 12 : 0   // Inertia=mass * radius^2. 12 is a magic constant that can be changed
   });
 };
 
@@ -46,68 +46,54 @@ setInterval(
     a.width ^= 0;
     for(i = objects.length; i--;){
       c.strokeStyle = '#888';
-      var circle = objects[i];
       c.save();
       c.beginPath();
-      c.translate(circle.C.x, circle.C.y);
-      c.rotate(circle.B);
-      c.arc(0, 0, circle.R, 0, 7);
+      c.translate(objects[i].C.x, objects[i].C.y);
+      c.rotate(objects[i].B);
+      c.arc(0, 0, objects[i].R, 0, 7);
       c.lineTo(0, 0);
       c.stroke();
       c.restore();
     }
   
     // Compute collisions
-      for(i = objects.length; i--;){
-        for(j = objects.length; j-- > i;){
-    for(k = 15; k--;){
+    for(i = objects.length; i--;){
+      for(j = objects.length; j-- > i;){
+        for(k = 15; k--;){
         
           // Test collision
           var c1 = objects[i], c2 = objects[j];
           var vFrom1to2 = substract(c2.C, c1.C);
           var rSum = c1.R + c2.R;
           var dist = length(vFrom1to2);
-          if (dist < Math.sqrt(rSum * rSum)) {
-            var normalFrom2to1 = normalize(scale(vFrom1to2, -1));
-            var radiusC2 = scale(normalFrom2to1, c2.R);
+          if(dist < rSum){
             D = rSum - dist, // depth
             N = normalize(vFrom1to2), // normal
-            S = add(c2.C, radiusC2), // start
+            S = add(c2.C, scale( normalize(scale(vFrom1to2, -1)), c2.R)), // start
             E = add(S, scale(N, D)) // end
             
             // Resolve collision
-            if(c1.IM || c2.IM){
+            if(c1.M || c2.M){
               //  correct positions
-              var c1InvMass = c1.IM;
-              var c2InvMass = c2.IM;
-              var num = D / (c1InvMass + c2InvMass) * .8; // .8 = poscorrectionrate = percentage of separation to project objects
-              var correctionAmount = scale(N, num);
-              c1.C = add(c1.C, scale(correctionAmount, -c1InvMass));
-              c2.C = add(c2.C, scale(correctionAmount, c2InvMass));
+              var correctionAmount = scale(N, D / (c1.M + c2.M) * .8); // .8 = poscorrectionrate = percentage of separation to project objects
+              c1.C = add(c1.C, scale(correctionAmount, -c1.M));
+              c2.C = add(c2.C, scale(correctionAmount, c2.M));
 
               //the direction of collisionInfo is always from c1 to c2
               //but the Mass is inversed, so start scale with c2 and end scale with c1
-              var start = scale(S, c2.IM / (c1.IM + c2.IM));
-              var end = scale(E, c1.IM / (c1.IM + c2.IM));
-              var p = add(start, end);
+              var p = add(scale(S, c2.M / (c1.M + c2.M)), scale(E, c1.M / (c1.M + c2.M)));
               //r is vector from center of object to collision point
               var r1 = substract(p, c1.C);
               var r2 = substract(p, c2.C);
 
               //newV = V + D cross R
-              var v1 = add(c1.V, Vec2(-1 * c1.D * r1.y, c1.D * r1.x));
-              var v2 = add(c2.V, Vec2(-1 * c2.D * r2.y, c2.D * r2.x));
-              var relativeVelocity = substract(v2, v1);
+              var relativeVelocity = substract(add(c2.V, Vec2(-1 * c2.D * r2.y, c2.D * r2.x)), add(c1.V, Vec2(-1 * c1.D * r1.y, c1.D * r1.x)));
 
               // Relative velocity in normal direction
               var rVelocityInNormal = dot(relativeVelocity, N);
 
               //if objects moving apart ignore
-              if (rVelocityInNormal < 0){
-
-                // compute and apply response impulses for each object  
-                var newRestituion = Math.min(.5, .5);
-                var newFriction = Math.min(.5, .5);
+              if(rVelocityInNormal < 0){
 
                 //R cross N
                 var R1crossN = cross(r1, N);
@@ -115,37 +101,27 @@ setInterval(
 
                 // Calc impulse scalar
                 // the formula of jN can be found in http://www.myphysicslab.com/collision.html
-                var jN = -(1 + newRestituion) * rVelocityInNormal;
-                jN = jN / (c1.IM + c2.IM +
-                    R1crossN * R1crossN * c1.I +
-                    R2crossN * R2crossN * c2.I);
+                var jN = (-(1.5) * rVelocityInNormal) / (c1.M + c2.M + R1crossN * R1crossN * c1.I + R2crossN * R2crossN * c2.I);
 
                 //impulse is in direction of normal ( from c1 to c2)
                 var impulse = scale(N, jN);
                 // impulse = F dt = m * ?v
                 // ?v = impulse / m
-                c1.V = substract(c1.V, scale(impulse, c1.IM));
-                c2.V = add(c2.V, scale(impulse, c2.IM));
+                c1.V = substract(c1.V, scale(impulse, c1.M));
+                c2.V = add(c2.V, scale(impulse, c2.M));
                 c1.D -= R1crossN * jN * c1.I;
                 c2.D += R2crossN * jN * c2.I;
-                var tangent = substract(relativeVelocity, scale(N, dot(relativeVelocity, N)));
+                var tangent = scale(normalize(substract(relativeVelocity, scale(N, dot(relativeVelocity, N)))), -1);
 
                 //relativeVelocity.dot(tangent) should less than 0
-                tangent = scale(normalize(tangent), -1);
                 var R1crossT = cross(r1, tangent);
                 var R2crossT = cross(r2, tangent);
-                var jT = -(1 + newRestituion) * dot(relativeVelocity, tangent) * newFriction;
-                jT = jT / (c1.IM + c2.IM + R1crossT * R1crossT * c1.I + R2crossT * R2crossT * c2.I);
-
-                // friction should less than force in normal direction
-                if (jT > jN) {
-                  jT = jN;
-                }
+                var jT = -(1 + .5) * dot(relativeVelocity, tangent) * .5 / (c1.M + c2.M + R1crossT * R1crossT * c1.I + R2crossT * R2crossT * c2.I);
 
                 //impulse is from c1 to c2 (in opposite direction of velocity)
                 impulse = scale(tangent, jT);
-                c1.V = substract(c1.V, scale(impulse, c1.IM));
-                c2.V = add(c2.V, scale(impulse,c2.IM));
+                c1.V = substract(c1.V, scale(impulse, c1.M));
+                c2.V = add(c2.V, scale(impulse,c2.M));
                 c1.D -= R1crossT * jT * c1.I;
                 c2.D += R2crossT * jT * c2.I;
               }
