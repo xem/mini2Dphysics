@@ -77,36 +77,32 @@ Circle.prototype.move = function (s) {
   return this;
 };
 
-Circle.prototype.draw = function (context) {
-  context.beginPath();
+Circle.prototype.draw = function () {
+  c.beginPath();
 
   // circle
-  context.arc(this.mCenter.x, this.mCenter.y, this.mRadius, 0, Math.PI * 2, true);
+  c.arc(this.mCenter.x, this.mCenter.y, this.mRadius, 0, Math.PI * 2, true);
 
   // line
-  context.moveTo(this.mStartpoint.x, this.mStartpoint.y);
-  context.lineTo(this.mCenter.x, this.mCenter.y);
+  c.moveTo(this.mStartpoint.x, this.mStartpoint.y);
+  c.lineTo(this.mCenter.x, this.mCenter.y);
   
-  context.closePath();
-  context.stroke();
+  c.closePath();
+  c.stroke();
 };
 
 //rotate angle in counterclockwise
-Circle.prototype.rotate = function (angle) {
+Circle.prototype.rotate = function(angle){
   this.mAngle += angle;
   this.mStartpoint = this.mStartpoint.rotate(this.mCenter, angle);
   return this;
 };
 
-Circle.prototype.updateInertia = function () {
-  if (this.mInvMass === 0) {
-    this.mInertia = 0;
-  } else {
+Circle.prototype.updateInertia = function(){
     // this.mInvMass is inverted!!
     // Inertia=mass * radius^2
     // 12 is a constant value that can be changed
-    this.mInertia = (1 / this.mInvMass) * (this.mRadius * this.mRadius) / 12;
-  }
+    this.mInertia = this.mInvMass ? (1 / this.mInvMass) * (this.mRadius * this.mRadius) / 12 : 0;
 };
 
 testCollision = function(c1, c2, info){
@@ -124,13 +120,13 @@ testCollision = function(c1, c2, info){
     // overlapping bu not same position
     var normalFrom2to1 = vFrom1to2.scale(-1).normalize();
     var radiusC2 = normalFrom2to1.scale(c2.mRadius);
-    info.setInfo(rSum - dist, vFrom1to2.normalize(), c2.mCenter.add(radiusC2));
+    setInfo(info, rSum - dist, vFrom1to2.normalize(), c2.mCenter.add(radiusC2));
   } else {
     //same position
     if (c1.mRadius > c2.mRadius) {
-      info.setInfo(rSum, new Vec2(0, -1), c1.mCenter.add(new Vec2(0, c1.mRadius)));
+      setInfo(info, rSum, new Vec2(0, -1), c1.mCenter.add(new Vec2(0, c1.mRadius)));
     } else {
-      info.setInfo(rSum, new Vec2(0, -1), c2.mCenter.add(new Vec2(0, c2.mRadius)));
+      setInfo(info, rSum, new Vec2(0, -1), c2.mCenter.add(new Vec2(0, c2.mRadius)));
     }
   }
   return true;
@@ -154,12 +150,12 @@ var resolveCollision = function (s1, s2, collisionInfo) {
   //  correct positions
   var s1InvMass = s1.mInvMass;
   var s2InvMass = s2.mInvMass;
-  var num = collisionInfo.getDepth() / (s1InvMass + s2InvMass) * .8; // .8 = poscorrectionrate = percentage of separation to project objects
-  var correctionAmount = collisionInfo.getNormal().scale(num);
+  var num = collisionInfo.mDepth / (s1InvMass + s2InvMass) * .8; // .8 = poscorrectionrate = percentage of separation to project objects
+  var correctionAmount = collisionInfo.mNormal.scale(num);
   s1.move(correctionAmount.scale(-s1InvMass));
   s2.move(correctionAmount.scale(s2InvMass));
   
-  var n = collisionInfo.getNormal();
+  var n = collisionInfo.mNormal;
 
   //the direction of collisionInfo is always from s1 to s2
   //but the Mass is inversed, so start scale with s2 and end scale with s1
