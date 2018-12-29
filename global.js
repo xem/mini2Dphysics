@@ -1,10 +1,9 @@
 // Globals
-var c = a.getContext('2d')
 var mGravity = Vec2(0, 100);
 var objects = [];
 
 // Collision info helpers
-setInfo = function(info, d, n, s){
+var setInfo = function(info, d, n, s){
   info.D = d; // depth
   info.N = n; // normal
   info.S = s; // start
@@ -20,13 +19,13 @@ setInfo = function(info, d, n, s){
 
 // Init scene
 new Circle(Vec2(400, 1100), 800, 0, .5, .5);
-for (var i = 0; i < 30; i++) {
+for (var i = 0; i < 30; i++){
   var r1 = new Circle(Vec2(Math.random() * 800, Math.random() * 450 / 2), Math.random() * 20 + 10, Math.random() * 30, Math.random(), Math.random());
 }
 
 // Loop
 setInterval(
-  function (){
+  function(){
     
     // Draw
     a.width ^= 0;
