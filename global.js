@@ -13,15 +13,14 @@ var distance = (v,w) => length(substract(v,w));
 // Globals
 var mGravity = Vec2(0, 100);
 var objects = [];
+var collisionInfo = {};
 
 // Collision info helpers
-var setInfo = function(d, n, s){
-  collisionInfo = {
-    D: d, // depth
-    N: n, // normal
-    S: s, // start
-    E: add(s, scale(n, d)) // end
-  }
+var setInfo = (D,N,S) => collisionInfo = {
+  D, // depth
+  N, // normal
+  S, // start
+  E: add(S, scale(N, D)) // end
 };
 
 /*CollisionInfo.prototype.changeDir = function(){
@@ -39,7 +38,8 @@ for (var i = 0; i < 30; i++){
 
 // Loop
 setInterval(
-  function(){
+
+  ()=>{
     
     // Draw
     a.width ^= 0;
@@ -49,11 +49,9 @@ setInterval(
     }
   
     // Compute collisions
-    var i, j, k;
-    collisionInfo = {};
-    for (k = 0; k < 15; k++){
-      for (i = 0; i < objects.length; i++){
-        for (j = i + 1; j < objects.length; j++){
+    for(var k = 0; k < 15; k++){
+      for(var i = 0; i < objects.length; i++){
+        for(var j = i + 1; j < objects.length; j++){
           // Test bounds (not needed if no rects)
           //if (objects[i].boundTest(objects[j])) {
             //if (objects[i].collisionTest(objects[j], collisionInfo)) {
@@ -71,7 +69,7 @@ setInterval(
     }
   
     // Update scene
-    for (var i = 0; i < objects.length; i++){
+    for(i = 0; i < objects.length; i++){
       updateRigidShape(objects[i]);
     }
   },

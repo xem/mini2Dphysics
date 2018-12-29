@@ -1,4 +1,4 @@
-function RigidShape(center, mass, friction=.8, restitution=.2){
+var RigidShape = (center, mass, friction=.8, restitution=.2) => {
   var shape = {};
   shape.C = center; // center
   shape.I = 0; // inertia
@@ -15,7 +15,7 @@ function RigidShape(center, mass, friction=.8, restitution=.2){
   return shape;
 };
 
-var updateRigidShape = function(shape){
+var updateRigidShape = shape => {
   var dt = .016;
   //v += a*t
   shape.V = add(shape.V, scale(shape.A, dt));
@@ -36,7 +36,7 @@ var updateRigidShape = function(shape){
   return true;
 };*/
 
-var Circle = function(center, radius, mass, friction, restitution){
+var Circle = (center, radius, mass, friction, restitution) => {
   var shape = RigidShape(center, mass, friction, restitution);
   shape.T = "Circle"; // type
   shape.RA = radius; // radius
@@ -45,12 +45,12 @@ var Circle = function(center, radius, mass, friction, restitution){
   updateInertiaCircle(shape);
 };
 
-var moveCircle = function(circle, s){
+var moveCircle = (circle, s) => {
   circle.SP = add(circle.SP, s);
   circle.C = add(circle.C, s);
 };
 
-var drawCircle = function(circle){
+var drawCircle = circle => {
   c.beginPath();
 
   // circle
@@ -65,19 +65,19 @@ var drawCircle = function(circle){
 };
 
 //rotate angle in counterclockwise
-var rotateCircle = function(circle, angle){
+var rotateCircle = (circle, angle) => {
   circle.AN += angle;
   circle.SP = rotate(circle.SP, circle.C, angle);
 };
 
-var updateInertiaCircle = function(circle){
+var updateInertiaCircle = circle => {
   // this.IM is inverted!!
   // Inertia=mass * radius^2
   // 12 is a constant value that can be changed
   circle.I = circle.IM ? (1 / circle.IM) * (circle.RA * circle.RA) / 12 : 0;
 };
 
-var testCollision = function(c1, c2, info){
+var testCollision = (c1, c2, info) => {
   var status;
   
   // Circle vs circle
@@ -106,7 +106,7 @@ var testCollision = function(c1, c2, info){
 };
 
 
-var resolveCollision = function (s1, s2, collisionInfo) {
+var resolveCollision = (s1, s2, collisionInfo) => {
   if ((s1.IM === 0) && (s2.IM === 0)) {
     return;
   }
