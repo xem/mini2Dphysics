@@ -1,3 +1,15 @@
+// Vec2 lib
+var Vec2 = (x,y) => ({x,y});
+var length = v => dot(v,v)**.5;
+var add = (v,w) => Vec2(v.x + w.x, v.y + w.y);
+var substract = (v,w) => add(v, scale(w, -1));
+var scale = (v,n) => Vec2(v.x * n, v.y * n);
+var dot = (v,w) => v.x * w.x + v.y * w.y;
+var cross = (v,w) => v.x * w.y - v.y * w.x;
+var rotate = (v, center, angle, x = v.x - center.x, y = v.y - center.y) => Vec2(x * Math.cos(angle) - y * Math.sin(angle) + center.x, x * Math.sin(angle) + y * Math.cos(angle) + center.y);
+var normalize = v => scale(v, 1 / (length(v) || 1));
+var distance = (v,w) => length(substract(v,w));
+
 // Globals
 var mGravity = Vec2(0, 100);
 var objects = [];
@@ -36,12 +48,7 @@ setInterval(
   
     // Compute collisions
     var i, j, k;
-    var collisionInfo = {
-      mDepth: 0,
-      mNormal: Vec2(0, 0),
-      mStart: Vec2(0, 0),
-      mEnd: Vec2(0, 0)
-    };
+    var collisionInfo = {};
     for (k = 0; k < 15; k++){
       for (i = 0; i < objects.length; i++){
         for (j = i + 1; j < objects.length; j++){
