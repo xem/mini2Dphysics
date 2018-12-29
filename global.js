@@ -1,12 +1,12 @@
 // Globals
 var c = a.getContext('2d')
-var mGravity = new Vec2(0, 100);
+var mGravity = Vec2(0, 100);
 var objects = [];
 
 // Init scene
-new Circle(new Vec2(400, 1100), 800, 0, .5, .5);
+new Circle(Vec2(400, 1100), 800, 0, .5, .5);
 for (var i = 0; i < 30; i++) {
-  var r1 = new Circle(new Vec2(Math.random() * 800, Math.random() * 450 / 2), Math.random() * 20 + 10, Math.random() * 30, Math.random(), Math.random());
+  var r1 = new Circle(Vec2(Math.random() * 800, Math.random() * 450 / 2), Math.random() * 20 + 10, Math.random() * 30, Math.random(), Math.random());
 }
 
 // Loop
@@ -23,10 +23,10 @@ setInterval(
     // Compute collisions
     var i, j, k;
     var collisionInfo = {
-      D: 0,
-      N: new Vec2(0, 0),
-      S: new Vec2(0, 0),
-      E: new Vec2(0, 0)
+      mDepth: 0,
+      mNormal: Vec2(0, 0),
+      mStart: Vec2(0, 0),
+      mEnd: Vec2(0, 0)
     };
     for (k = 0; k < 15; k++){
       for (i = 0; i < objects.length; i++){
@@ -48,8 +48,7 @@ setInterval(
     }
   
     // Update scene
-    var i;
-    for (i = 0; i < objects.length; i++){
+    for (var i = 0; i < objects.length; i++){
       objects[i].update(c);
     }
   },

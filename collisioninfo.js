@@ -2,7 +2,7 @@ setInfo = function(info, d, n, s){
   info.D = d; // depth
   info.N = n; // normal
   info.S = s; // start
-  info.E = s.add(n.scale(d)); // end
+  info.E = add(s, scale(n, d)); // end
 };
 
 /*CollisionInfo.prototype.changeDir = function(){
