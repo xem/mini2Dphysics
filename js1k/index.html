@@ -162,11 +162,10 @@ setInterval(
   
     // Update scene
     for(i = objects.length; i--; ){
-      var shape = objects[i];
-      shape.V = add(shape.V, scale(shape.A, .01));
-      shape.C = add(shape.C, scale(shape.V, .01));
-      shape.AV += shape.AA * .01;
-      shape.AN += shape.AV * .01;
+      objects[i].V = add(objects[i].V, scale(objects[i].A, .01));
+      objects[i].C = add(objects[i].C, scale(objects[i].V, .01));
+      objects[i].AV += objects[i].AA * .01;
+      objects[i].AN += objects[i].AV * .01;
     }
   },
   9
