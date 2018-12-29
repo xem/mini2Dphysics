@@ -3,6 +3,30 @@
 
 <script>
 
+// vars renamed
+// a: -
+// b: c1
+// c: -
+// d: c2
+// e: vFrom1to2
+// f: rSum
+// g: dist
+// h: correctionAmount
+// i, j, k: -
+// l: r1
+// m: r2
+// n: relativeVelocity
+// o: rVelocityInNormal
+// p: p
+// q: R1crossN
+// r: R2crossN
+// s: jN
+// t: impulse
+// u: tangent
+// v: R1crossT
+// w: R2crossT
+// x: jT
+
 var Circle = (C, R, mass, B, M = mass ? 1 / mass : 0) => {
   objects.push({
     C, // center
@@ -34,7 +58,7 @@ var objects = [];
 // Init scene
 Circle(Vec2(400, 1100), 800, 0, 0);
 for(i = 99; i--; ){
-  Circle(Vec2(Math.random() * 800, Math.random() * 800 - 600), Math.random() * 20 + 10, Math.random() * 30, Math.random() * 7);
+  Circle(Vec2(Math.random() * 800, Math.random() * 800 - 600), Math.random() * 20 + 10, Math.random() * 20 + 10, Math.random() * 7);
 }
 
 // Loop
@@ -62,68 +86,69 @@ setInterval(
         for(k = 15; k--;){
         
           // Test collision
-          var c1 = objects[i], c2 = objects[j];
-          var vFrom1to2 = substract(c2.C, c1.C);
-          var rSum = c1.R + c2.R;
-          var dist = length(vFrom1to2);
-          if(dist < rSum){
-            D = rSum - dist, // depth
-            N = normalize(vFrom1to2), // normal
-            S = add(c2.C, scale( normalize(scale(vFrom1to2, -1)), c2.R)), // start
+          b = objects[i];
+          d = objects[j];
+          e = substract(d.C, b.C);
+          f = b.R + d.R;
+          g = length(e);
+          if(g < f){
+            D = f - g, // depth
+            N = normalize(e), // normal
+            S = add(d.C, scale( normalize(scale(e, -1)), d.R)), // start
             E = add(S, scale(N, D)) // end
             
             // Resolve collision
-            if(c1.M || c2.M){
+            if(b.M || d.M){
               //  correct positions
-              var correctionAmount = scale(N, D / (c1.M + c2.M) * .8); // .8 = poscorrectionrate = percentage of separation to project objects
-              c1.C = add(c1.C, scale(correctionAmount, -c1.M));
-              c2.C = add(c2.C, scale(correctionAmount, c2.M));
+              h = scale(N, D / (b.M + d.M) * .8); // .8 = poscorrectionrate = percentage of separation to project objects
+              b.C = add(b.C, scale(h, -b.M));
+              d.C = add(d.C, scale(h, d.M));
 
-              //the direction of collisionInfo is always from c1 to c2
-              //but the Mass is inversed, so start scale with c2 and end scale with c1
-              var p = add(scale(S, c2.M / (c1.M + c2.M)), scale(E, c1.M / (c1.M + c2.M)));
+              //the direction of collisionInfo is always from b to d
+              //but the Mass is inversed, so start scale with d and end scale with b
+              p = add(scale(S, d.M / (b.M + d.M)), scale(E, b.M / (b.M + d.M)));
               //r is vector from center of object to collision point
-              var r1 = substract(p, c1.C);
-              var r2 = substract(p, c2.C);
+              l = substract(p, b.C);
+              m = substract(p, d.C);
 
               //newV = V + D cross R
-              var relativeVelocity = substract(add(c2.V, Vec2(-1 * c2.D * r2.y, c2.D * r2.x)), add(c1.V, Vec2(-1 * c1.D * r1.y, c1.D * r1.x)));
+              n = substract(add(d.V, Vec2(-1 * d.D * m.y, d.D * m.x)), add(b.V, Vec2(-1 * b.D * l.y, b.D * l.x)));
 
               // Relative velocity in normal direction
-              var rVelocityInNormal = dot(relativeVelocity, N);
+              o = dot(n, N);
 
               //if objects moving apart ignore
-              if(rVelocityInNormal < 0){
+              if(o < 0){
 
                 //R cross N
-                var R1crossN = cross(r1, N);
-                var R2crossN = cross(r2, N);
+                q = cross(l, N);
+                r = cross(m, N);
 
-                // Calc impulse scalar
-                // the formula of jN can be found in http://www.myphysicslab.com/collision.html
-                var jN = (-(1.5) * rVelocityInNormal) / (c1.M + c2.M + R1crossN * R1crossN * c1.I + R2crossN * R2crossN * c2.I);
+                // Calc t scalar
+                // the formula of s can be found in http://www.myphysicslab.com/collision.html
+                s = (-(1.5) * o) / (b.M + d.M + q * q * b.I + r * r * d.I);
 
-                //impulse is in direction of normal ( from c1 to c2)
-                var impulse = scale(N, jN);
-                // impulse = F dt = m * ?v
-                // ?v = impulse / m
-                c1.V = substract(c1.V, scale(impulse, c1.M));
-                c2.V = add(c2.V, scale(impulse, c2.M));
-                c1.D -= R1crossN * jN * c1.I;
-                c2.D += R2crossN * jN * c2.I;
-                var tangent = scale(normalize(substract(relativeVelocity, scale(N, dot(relativeVelocity, N)))), -1);
+                //t is in direction of normal ( from b to d)
+                t = scale(N, s);
+                // t = F dt = m * ?v
+                // ?v = t / m
+                b.V = substract(b.V, scale(t, b.M));
+                d.V = add(d.V, scale(t, d.M));
+                b.D -= q * s * b.I;
+                d.D += r * s * d.I;
+                u = scale(normalize(substract(n, scale(N, dot(n, N)))), -1);
 
-                //relativeVelocity.dot(tangent) should less than 0
-                var R1crossT = cross(r1, tangent);
-                var R2crossT = cross(r2, tangent);
-                var jT = -(1 + .5) * dot(relativeVelocity, tangent) * .5 / (c1.M + c2.M + R1crossT * R1crossT * c1.I + R2crossT * R2crossT * c2.I);
+                //n.dot(u) should less than 0
+                v = cross(l, u);
+                w = cross(m, u);
+                x = -(1.5) * dot(n, u) * .5 / (b.M + d.M + v * v * b.I + w * w * d.I);
 
-                //impulse is from c1 to c2 (in opposite direction of velocity)
-                impulse = scale(tangent, jT);
-                c1.V = substract(c1.V, scale(impulse, c1.M));
-                c2.V = add(c2.V, scale(impulse,c2.M));
-                c1.D -= R1crossT * jT * c1.I;
-                c2.D += R2crossT * jT * c2.I;
+                //t is from b to d (in opposite direction of velocity)
+                t = scale(u, x);
+                b.V = substract(b.V, scale(t, b.M));
+                d.V = add(d.V, scale(t,d.M));
+                b.D -= v * x * b.I;
+                d.D += w * x * d.I;
               }
             }
           }
