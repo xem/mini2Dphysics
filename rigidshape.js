@@ -1,50 +1,28 @@
-function RigidShape(center, mass, friction=.8, restitution=.2) {
-  this.C = center;
-  this.I = 0;
-  this.F = friction;
-  this.R = restitution;
-  this.V = Vec2(0, 0);
-  this.IM = mass ? 1 / mass : 0;
-  this.A = mass ? mGravity : Vec2(0, 0);
-  this.AN = 0;
-  this.AV = 0;
-  this.AA = 0;
-  this.B = 0;
-  objects.push(this);
-}
-
-/*RigidShape.prototype.updateMass = function (delta) {
-  var mass;
-  if (this.IM !== 0) {
-    mass = 1 / this.IM;
-  } else {
-    mass = 0;
-  }
-  mass += delta;
-  if (mass <= 0) {
-    this.IM = 0;
-    this.V = new Vec2(0, 0);
-    this.A = new Vec2(0, 0);
-    this.AV = 0;
-    this.AA = 0;
-  } else {
-    this.IM = 1 / mass;
-    this.A = mGravity;
-  }
-  this.updateInertia();
+function RigidShape(center, mass, friction=.8, restitution=.2){
+  var shape = {};
+  shape.C = center; // center
+  shape.I = 0; // inertia
+  shape.F = friction; // friction
+  shape.R = restitution; // restitution (bouncing)
+  shape.V = Vec2(0, 0); // velocity (speed)
+  shape.IM = mass ? 1 / mass : 0; // inverseMass (0 if immobile)
+  shape.A = mass ? mGravity : Vec2(0, 0); // acceleration
+  shape.AN = 0; // angle
+  shape.AV = 0; // angle velocity
+  shape.AA = 0; // angle acceleration
+  shape.B = 0; // bounds radius
+  objects.push(shape);
+  return shape;
 };
 
-RigidShape.prototype.updateInertia = function () {};
-*/
-
-RigidShape.prototype.update = function () {
+var updateRigidShape = function(shape){
   var dt = .016;
   //v += a*t
-  this.V = add(this.V, scale(this.A, dt));
+  shape.V = add(shape.V, scale(shape.A, dt));
   //s += v*t 
-  this.move(scale(this.V, dt));
-  this.AV += this.AA * dt;
-  this.rotate(this.AV * dt);
+  moveCircle(shape, scale(shape.V, dt));
+  shape.AV += shape.AA * dt;
+  rotateCircle(shape, shape.AV * dt);
 };
 
 /*RigidShape.prototype.boundTest = function (otherShape) {
@@ -58,59 +36,54 @@ RigidShape.prototype.update = function () {
   return true;
 };*/
 
-var Circle = function (center, radius, mass, friction, restitution) {
-  RigidShape.call(this, center, mass, friction, restitution);
-  this.mType = "Circle";
-  this.mRadius = radius;
-  this.B = radius;
-  this.SP = Vec2(center.x, center.y + radius);
-  this.updateInertia();
+var Circle = function(center, radius, mass, friction, restitution){
+  var shape = RigidShape(center, mass, friction, restitution);
+  shape.T = "Circle"; // type
+  shape.RA = radius; // radius
+  shape.B = radius; // bounding radius
+  shape.SP = Vec2(center.x, center.y + radius); // start point (for the line)
+  updateInertiaCircle(shape);
 };
 
-var prototype = Object.create(RigidShape.prototype);
-prototype.constructor = Circle;
-Circle.prototype = prototype;
-
-Circle.prototype.move = function (s){
-  this.SP = add(this.SP, s);
-  this.C = add(this.C, s);
-  return this;
+var moveCircle = function(circle, s){
+  circle.SP = add(circle.SP, s);
+  circle.C = add(circle.C, s);
 };
 
-Circle.prototype.draw = function () {
+var drawCircle = function(circle){
   c.beginPath();
 
   // circle
-  c.arc(this.C.x, this.C.y, this.mRadius, 0, Math.PI * 2, true);
+  c.arc(circle.C.x, circle.C.y, circle.RA, 0, 7);
 
   // line
-  c.moveTo(this.SP.x, this.SP.y);
-  c.lineTo(this.C.x, this.C.y);
+  c.moveTo(circle.SP.x, circle.SP.y);
+  c.lineTo(circle.C.x, circle.C.y);
   
   c.closePath();
   c.stroke();
 };
 
 //rotate angle in counterclockwise
-Circle.prototype.rotate = function(angle){
-  this.AN += angle;
-  this.SP = rotate(this.SP, this.C, angle);
-  return this;
+var rotateCircle = function(circle, angle){
+  circle.AN += angle;
+  circle.SP = rotate(circle.SP, circle.C, angle);
 };
 
-Circle.prototype.updateInertia = function(){
-    // this.IM is inverted!!
-    // Inertia=mass * radius^2
-    // 12 is a constant value that can be changed
-    this.I = this.IM ? (1 / this.IM) * (this.mRadius * this.mRadius) / 12 : 0;
+var updateInertiaCircle = function(circle){
+  // this.IM is inverted!!
+  // Inertia=mass * radius^2
+  // 12 is a constant value that can be changed
+  circle.I = circle.IM ? (1 / circle.IM) * (circle.RA * circle.RA) / 12 : 0;
 };
 
-testCollision = function(c1, c2, info){
+var testCollision = function(c1, c2, info){
   var status;
   
   // Circle vs circle
+  //if (c1.T === "Circle" && c2.T === "Circle") {
   var vFrom1to2 = substract(c2.C, c1.C);
-  var rSum = c1.mRadius + c2.mRadius;
+  var rSum = c1.RA + c2.RA;
   var dist = length(vFrom1to2);
   if (dist > Math.sqrt(rSum * rSum)) {
     //not overlapping
@@ -119,27 +92,18 @@ testCollision = function(c1, c2, info){
   if (dist !== 0) {
     // overlapping bu not same position
     var normalFrom2to1 = normalize(scale(vFrom1to2, -1));
-    var radiusC2 = scale(normalFrom2to1, c2.mRadius);
-    setInfo(info, rSum - dist, normalize(vFrom1to2), add(c2.C, radiusC2));
+    var radiusC2 = scale(normalFrom2to1, c2.RA);
+    setInfo(rSum - dist, normalize(vFrom1to2), add(c2.C, radiusC2));
   } else {
     //same position
-    if (c1.mRadius > c2.mRadius) {
-      setInfo(info, rSum, Vec2(0, -1), add(c1.C, Vec2(0, c1.mRadius)));
+    if (c1.RA > c2.RA) {
+      setInfo(rSum, Vec2(0, -1), add(c1.C, Vec2(0, c1.RA)));
     } else {
-      setInfo(info, rSum, Vec2(0, -1), add(c2.C,Vec2(0, c2.mRadius)));
+      setInfo(rSum, Vec2(0, -1), add(c2.C,Vec2(0, c2.RA)));
     }
   }
   return true;
-  
-  
-  
-  //if (shape2.mType === "Circle") {
-  //  status = collidedCircCirc(shape1, shape2, info);
-  //} else {
-  //  status = shape2.collidedRectCirc(shape1, info);
-  //}
-  //return status;
-}
+};
 
 
 var resolveCollision = function (s1, s2, collisionInfo) {
@@ -152,8 +116,8 @@ var resolveCollision = function (s1, s2, collisionInfo) {
   var s2InvMass = s2.IM;
   var num = collisionInfo.D / (s1InvMass + s2InvMass) * .8; // .8 = poscorrectionrate = percentage of separation to project objects
   var correctionAmount = scale(collisionInfo.N, num);
-  s1.move(scale(correctionAmount, -s1InvMass));
-  s2.move(scale(correctionAmount, s2InvMass));
+  moveCircle(s1, scale(correctionAmount, -s1InvMass));
+  moveCircle(s2, scale(correctionAmount, s2InvMass));
   
   var n = collisionInfo.N;
 

@@ -15,11 +15,13 @@ var mGravity = Vec2(0, 100);
 var objects = [];
 
 // Collision info helpers
-var setInfo = function(info, d, n, s){
-  info.D = d; // depth
-  info.N = n; // normal
-  info.S = s; // start
-  info.E = add(s, scale(n, d)); // end
+var setInfo = function(d, n, s){
+  collisionInfo = {
+    D: d, // depth
+    N: n, // normal
+    S: s, // start
+    E: add(s, scale(n, d)) // end
+  }
 };
 
 /*CollisionInfo.prototype.changeDir = function(){
@@ -30,9 +32,9 @@ var setInfo = function(info, d, n, s){
 };*/
 
 // Init scene
-new Circle(Vec2(400, 1100), 800, 0, .5, .5);
+Circle(Vec2(400, 1100), 800, 0, .5, .5);
 for (var i = 0; i < 30; i++){
-  var r1 = new Circle(Vec2(Math.random() * 800, Math.random() * 450 / 2), Math.random() * 20 + 10, Math.random() * 30, Math.random(), Math.random());
+  var r1 = Circle(Vec2(Math.random() * 800, Math.random() * 450 / 2), Math.random() * 20 + 10, Math.random() * 30, Math.random(), Math.random());
 }
 
 // Loop
@@ -43,12 +45,12 @@ setInterval(
     a.width ^= 0;
     for(var i = 0; i < objects.length; i++){
       c.strokeStyle = '#888';
-      objects[i].draw(c);
+      drawCircle(objects[i]);
     }
   
     // Compute collisions
     var i, j, k;
-    var collisionInfo = {};
+    collisionInfo = {};
     for (k = 0; k < 15; k++){
       for (i = 0; i < objects.length; i++){
         for (j = i + 1; j < objects.length; j++){
@@ -70,7 +72,7 @@ setInterval(
   
     // Update scene
     for (var i = 0; i < objects.length; i++){
-      objects[i].update(c);
+      updateRigidShape(objects[i]);
     }
   },
   16
