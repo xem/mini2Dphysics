@@ -51,7 +51,7 @@ setInterval(
             if(testCollision(objects[i], objects[j], collisionInfo)){
               
               //make sure the normal is always from object[i] to object[j] (can be disabled if no rects)
-              //if (collisionInfo.getNormal().dot(objects[j].mCenter.subtract(objects[i].mCenter)) < 0) {
+              //if (collisionInfo.getNormal().dot(objects[j].C.subtract(objects[i].C)) < 0) {
               //  collisionInfo.changeDir();
               //}
               resolveCollision(objects[i], objects[j], collisionInfo);
@@ -77,4 +77,4 @@ setInterval(
 //var r3 = new Rectangle(new Vec2(100, 200), 200, 20, 0);
 //var r4 = new Rectangle(new Vec2(10, 360), 20, 100, 0, 0, 1);
 //var r1 = new Rectangle(new Vec2(Math.random() * mWidth, Math.random() * mHeight / 2), Math.random() * 50 + 10, Math.random() * 50 + 10, Math.random() * 30, Math.random(), Math.random());
-//r1.mVelocity = new Vec2(0,0);
+//r1.V = new Vec2(0,0);
