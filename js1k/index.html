@@ -3,42 +3,39 @@
 
 <script>
 
-// vars renamed
-// a: -
+// vars:
+// a: canvas
 // b: c1
-// c: -
+// c: ctx2d
 // d: c2
 // e: vFrom1to2
 // f: rSum
 // g: dist
 // h: correctionAmount
-// i, j, k: -
+// i, j, k: loop vars
 // l: r1
 // m: r2
 // n: relativeVelocity
 // o: rVelocityInNormal
 // p: p
-// q: R1crossN
-// r: R2crossN
 // s: jN
 // t: impulse
 // u: tangent
-// v: R1crossT
-// w: R2crossT
 // x: jT
 
-var Circle = (C, R, mass, B, M = mass ? 1 / mass : 0) => {
+var Circle = (C, R = Math.random() * 30 + 10, M = 1/R) => {
   objects.push({
     C, // center
     I: 0, // inertia
     V: Vec2(0, 0), // velocity (speed)
     M, // inverseMass (0 if immobile)
-    A: Vec2(0, mass ? 90 : 0), // acceleration
-    B, // angle
+    A: Vec2(0, M ? 200 : 0), // acceleration
+    B: M ? Math.random() * 7 : 0, // angle
     D: 0, // angle velocity
     E: 0, // angle acceleration,
     R, // radius
-    I: M ? (1 / M) * (R * R) / 12 : 0   // Inertia=mass * radius^2. 12 is a magic constant that can be changed
+    I: M ? (1 / M) * (R * R) / 12 : 0,   // Inertia = mass * radius ^ 2. 12 is a magic constant that can be changed
+    Z: M ? String.fromCodePoint(0x1F600 + Math.random() * 69/*56*/ | 0) : "🌍" // emoji
   });
 };
 
@@ -56,9 +53,13 @@ var normalize = v => scale(v, 1 / (length(v) || 1));
 var objects = [];
 
 // Init scene
-Circle(Vec2(400, 1100), 800, 0, 0);
+Circle(Vec2(400, 600), 400, 0);
 for(i = 99; i--; ){
-  Circle(Vec2(Math.random() * 800, Math.random() * 800 - 600), Math.random() * 20 + 10, Math.random() * 20 + 10, Math.random() * 7);
+  Circle(Vec2(Math.random() * 800, Math.random() * 800 - 700));
+}
+
+onclick = e => {
+  Circle(Vec2(e.pageX, e.pageY));
 }
 
 // Loop
@@ -69,96 +70,94 @@ setInterval(
     // Draw
     a.width ^= 0;
     for(i = objects.length; i--;){
-      c.strokeStyle = '#888';
       c.save();
-      c.beginPath();
+      //c.beginPath();
       c.translate(objects[i].C.x, objects[i].C.y);
       c.rotate(objects[i].B);
       c.arc(0, 0, objects[i].R, 0, 7);
-      c.lineTo(0, 0);
-      c.stroke();
+      //c.lineWidth = 3;
+      c.font = objects[i].R * 1.9 + "px a";
+      //c.textAlign = "center";
+      //if(objects[i].M)
+      c.fillText(objects[i].Z,-objects[i].R*1.22,objects[i].R * .66);
+      //else c.stroke();
       c.restore();
     }
   
     // Compute collisions
     for(i = objects.length; i--;){
-      for(j = objects.length; j-- > i;){
+      for(j = objects.length; j-->i;){
         for(k = 15; k--;){
+            b = objects[i];
+            d = objects[j];
+            if((b.M && b.C.y < 400) || (d.M && d.C.y < 400)){ // perf
         
-          // Test collision
-          b = objects[i];
-          d = objects[j];
-          e = substract(d.C, b.C);
-          f = b.R + d.R;
-          g = length(e);
-          if(g < f){
-            D = f - g, // depth
-            N = normalize(e), // normal
-            S = add(d.C, scale( normalize(scale(e, -1)), d.R)), // start
-            E = add(S, scale(N, D)) // end
-            
-            // Resolve collision
-            if(b.M || d.M){
-              //  correct positions
-              h = scale(N, D / (b.M + d.M) * .8); // .8 = poscorrectionrate = percentage of separation to project objects
-              b.C = add(b.C, scale(h, -b.M));
-              d.C = add(d.C, scale(h, d.M));
+            // Test collision
 
-              //the direction of collisionInfo is always from b to d
-              //but the Mass is inversed, so start scale with d and end scale with b
-              p = add(scale(S, d.M / (b.M + d.M)), scale(E, b.M / (b.M + d.M)));
-              //r is vector from center of object to collision point
-              l = substract(p, b.C);
-              m = substract(p, d.C);
+            e = substract(d.C, b.C);
+            f = b.R + d.R;
+            g = length(e);
+            if(g < f){
+              D = f - g, // depth
+              N = normalize(e), // normal
+              S = add(d.C, scale(normalize(scale(e, -1)), d.R)), // start
+              E = add(S, scale(N, D)) // end
+              
+              // Resolve collision
+              if(b.M || d.M){
+                //  correct positions
+                h = scale(N, D / (b.M + d.M) * .8); // .8 = poscorrectionrate = percentage of separation to project objects
+                b.C = add(b.C, scale(h, -b.M));
+                d.C = add(d.C, scale(h, d.M));
 
-              //newV = V + D cross R
-              n = substract(add(d.V, Vec2(-1 * d.D * m.y, d.D * m.x)), add(b.V, Vec2(-1 * b.D * l.y, b.D * l.x)));
+                //the direction of collisionInfo is always from b to d
+                //but the Mass is inversed, so start scale with d and end scale with b
+                p = add(scale(S, d.M / (b.M + d.M)), scale(E, b.M / (b.M + d.M)));
+                //r is vector from center of object to collision point
+                l = substract(p, b.C);
+                m = substract(p, d.C);
 
-              // Relative velocity in normal direction
-              o = dot(n, N);
+                //newV = V + D cross R
+                n = substract(add(d.V, Vec2(-1 * d.D * m.y, d.D * m.x)), add(b.V, Vec2(-1 * b.D * l.y, b.D * l.x)));
 
-              //if objects moving apart ignore
-              if(o < 0){
+                // Relative velocity in normal direction
+                o = dot(n, N);
 
-                //R cross N
-                q = cross(l, N);
-                r = cross(m, N);
+                //if objects moving apart ignore
+                if(o < 0){
 
-                // Calc t scalar
-                // the formula of s can be found in http://www.myphysicslab.com/collision.html
-                s = (-(1.5) * o) / (b.M + d.M + q * q * b.I + r * r * d.I);
+                  // Calc t scalar
+                  // the formula of s can be found in http://www.myphysicslab.com/collision.html
+                  s = (-1.5 * o) / (b.M + d.M + cross(l, N) ** 2 * b.I + cross(m, N) ** 2 * d.I);
 
-                //t is in direction of normal ( from b to d)
-                t = scale(N, s);
-                // t = F dt = m * ?v
-                // ?v = t / m
-                b.V = substract(b.V, scale(t, b.M));
-                d.V = add(d.V, scale(t, d.M));
-                b.D -= q * s * b.I;
-                d.D += r * s * d.I;
-                u = scale(normalize(substract(n, scale(N, dot(n, N)))), -1);
+                  //t is in direction of normal ( from b to d)
+                  t = scale(N, s);
+                  // t = F dt = m * ?v
+                  // ?v = t / m
+                  b.V = substract(b.V, scale(t, b.M));
+                  d.V = add(d.V, scale(t, d.M));
+                  b.D -= cross(l, N) * s * b.I;
+                  d.D += cross(m, N) * s * d.I;
+                  u = scale(normalize(substract(n, scale(N, dot(n, N)))), -1);
+                  x = -1.5 * dot(n, u) * .5 / (b.M + d.M + cross(l, u) ** 2 * b.I + cross(m, u) ** 2 * d.I);
 
-                //n.dot(u) should less than 0
-                v = cross(l, u);
-                w = cross(m, u);
-                x = -(1.5) * dot(n, u) * .5 / (b.M + d.M + v * v * b.I + w * w * d.I);
-
-                //t is from b to d (in opposite direction of velocity)
-                t = scale(u, x);
-                b.V = substract(b.V, scale(t, b.M));
-                d.V = add(d.V, scale(t,d.M));
-                b.D -= v * x * b.I;
-                d.D += w * x * d.I;
+                  //t is from b to d (in opposite direction of velocity)
+                  t = scale(u, x);
+                  b.V = substract(b.V, scale(t, b.M));
+                  d.V = add(d.V, scale(t,d.M));
+                  b.D -= cross(l, u) * x * b.I;
+                  d.D += cross(m, u) * x * d.I;
+                }
               }
             }
           }
         }
       }
       // Update scene
-      objects[i].V = add(objects[i].V, scale(objects[i].A, .01));
-      objects[i].C = add(objects[i].C, scale(objects[i].V, .01));
-      objects[i].D += objects[i].E * .01;
-      objects[i].B += objects[i].D * .01;
+      b.V = add(b.V, scale(b.A, .01));
+      b.C = add(b.C, scale(b.V, .01));
+      b.D += objects[i].E * .01;
+      b.B += objects[i].D * .01;
     }
   },
   9
