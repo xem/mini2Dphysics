@@ -1,4 +1,5 @@
-﻿<canvas id=a width=1500 height=900></canvas>
+﻿<body id=b>
+<canvas id=a width=1500 height=900></canvas>
 <script>c = a.getContext('2d')</script>
 
 <script>
@@ -20,8 +21,8 @@
 // t: impulse
 // u: tangent
 // x: jT
-
-var Circle = (C, R = Math.random() * 30 + 10, M = 1/R) => {
+//b.bgColor="#333";
+var Circle = (C, R = Math.random() * 30 + 10, M = 1/R) => 
   objects.push({
     C, // center
     I: 0, // inertia
@@ -32,10 +33,9 @@ var Circle = (C, R = Math.random() * 30 + 10, M = 1/R) => {
     D: 0, // angle velocity
     E: 0, // angle acceleration,
     R, // radius
-    I: M,   // Inertia = mass * radius ^ 2. 12 is a magic constant that can be changed
+    //I: M,   // (here it's simplified as M) Inertia = mass * radius ^ 2. 12 is a magic constant that can be changed
     Z: M ? String.fromCodePoint(0x1F600 + Math.random() * 69/*56*/ | 0) : "🌍" // emoji
   });
-};
 
 // Vec2 lib
 var Vec2 = (x,y,t) => ({x,y});
@@ -101,11 +101,11 @@ setInterval(
                 n = substract(add(d.V, Vec2(-1 * d.D * m.y, d.D * m.x)), add(b.V, Vec2(-1 * b.D * l.y, b.D * l.x)));
 
                 //if objects moving apart ignore
-                if(dot(n, N) < 0){
+                //if(dot(n, N) < 0){
 
                   // Calc t scalar
                   // the formula of s can be found in http://www.myphysicslab.com/collision.html
-                  s = (-1.5 * dot(n, N)) / (b.M + d.M + cross(l, N) ** 2 * b.I + cross(m, N) ** 2 * d.I);
+                  s = (-1.5 * dot(n, N)) / (b.M + d.M + cross(l, N) ** 2 * b.M + cross(m, N) ** 2 * d.M);
 
                   //t is in direction of normal ( from b to d)
                   t = scale(N, s);
@@ -113,18 +113,18 @@ setInterval(
                   // ?v = t / m
                   b.V = substract(b.V, scale(t, b.M));
                   d.V = add(d.V, scale(t, d.M));
-                  b.D -= cross(l, N) * s * b.I;
-                  d.D += cross(m, N) * s * d.I;
+                  b.D -= cross(l, N) * s * b.M;
+                  d.D += cross(m, N) * s * d.M;
                   u = scale(normalize(substract(n, scale(N, dot(n, N)))), -1);
-                  x = -1.5 * dot(n, u) * .5 / (b.M + d.M + cross(l, u) ** 2 * b.I + cross(m, u) ** 2 * d.I);
+                  x = -1.5 * dot(n, u) * .5 / (b.M + d.M + cross(l, u) ** 2 * b.M + cross(m, u) ** 2 * d.M);
 
                   //t is from b to d (in opposite direction of velocity)
                   t = scale(u, x);
                   b.V = substract(b.V, scale(t, b.M));
                   d.V = add(d.V, scale(t, d.M));
-                  b.D -= cross(l, u) * x * b.I;
-                  d.D += cross(m, u) * x * d.I;
-                }
+                  b.D -= cross(l, u) * x * b.M;
+                  d.D += cross(m, u) * x * d.M;
+                //}
               //}
            // }
           }
@@ -135,7 +135,7 @@ setInterval(
       b.V = add(b.V, scale(b.A, .01));
       b.C = add(b.C, scale(b.V, .01));
       b.D += b.E * .01;
-      b.B += b.D * .01;
+      b.B += b.M ? b.D * .01 : .001;
       
       // Draw
       
@@ -148,7 +148,7 @@ setInterval(
       c.font = b.R * 1.9 + "px a";
       //c.textAlign = "center";
       //if(objects[i].M)
-      c.fillText(b.Z,-b.R*1.24,b.R * .66);
+      c.fillText(b.Z, -b.R * 1.24, b.R * .67);
       //else c.stroke();
       c.restore();
       //}
