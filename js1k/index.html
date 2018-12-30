@@ -1,4 +1,4 @@
-﻿<canvas id=a width=800 height=450></canvas>
+﻿<canvas id=a width=1500 height=900></canvas>
 <script>c = a.getContext('2d')</script>
 
 <script>
@@ -34,7 +34,7 @@ var Circle = (C, R = Math.random() * 30 + 10, M = 1/R) => {
     D: 0, // angle velocity
     E: 0, // angle acceleration,
     R, // radius
-    I: M ? (1 / M) * (R * R) / 12 : 0,   // Inertia = mass * radius ^ 2. 12 is a magic constant that can be changed
+    I: M * R * 2,   // Inertia = mass * radius ^ 2. 12 is a magic constant that can be changed
     Z: M ? String.fromCodePoint(0x1F600 + Math.random() * 69/*56*/ | 0) : "🌍" // emoji
   });
 };
@@ -53,9 +53,9 @@ var normalize = v => scale(v, 1 / (length(v) || 1));
 var objects = [];
 
 // Init scene
-Circle(Vec2(400, 600), 400, 0);
+Circle(Vec2(800, 800), 400, 0);
 for(i = 99; i--; ){
-  Circle(Vec2(Math.random() * 800, Math.random() * 800 - 700));
+  Circle(Vec2(Math.random() * 1500, Math.random() * 800 - 700));
 }
 
 onclick = e => {
@@ -79,7 +79,7 @@ setInterval(
       c.font = objects[i].R * 1.9 + "px a";
       //c.textAlign = "center";
       //if(objects[i].M)
-      c.fillText(objects[i].Z,-objects[i].R*1.22,objects[i].R * .66);
+      c.fillText(objects[i].Z,-objects[i].R*1.24,objects[i].R * .66);
       //else c.stroke();
       c.restore();
     }
@@ -90,7 +90,7 @@ setInterval(
         for(k = 15; k--;){
             b = objects[i];
             d = objects[j];
-            if((b.M && b.C.y < 400) || (d.M && d.C.y < 400)){ // perf
+            //if((b.M && b.C.y < 400) || (d.M && d.C.y < 400)){ // perf
         
             // Test collision
 
@@ -148,7 +148,7 @@ setInterval(
                   b.D -= cross(l, u) * x * b.I;
                   d.D += cross(m, u) * x * d.I;
                 }
-              }
+              //}
             }
           }
         }
