@@ -9,8 +9,6 @@
 // c: ctx2d
 // d: c2
 // e: vFrom1to2
-// f: rSum
-// g: dist
 // h: correctionAmount
 // i, j, k: loop vars
 // l: r1
@@ -34,60 +32,44 @@ var Circle = (C, R = Math.random() * 30 + 10, M = 1/R) => {
     D: 0, // angle velocity
     E: 0, // angle acceleration,
     R, // radius
-    I: M * R * 2,   // Inertia = mass * radius ^ 2. 12 is a magic constant that can be changed
+    I: M,   // Inertia = mass * radius ^ 2. 12 is a magic constant that can be changed
     Z: M ? String.fromCodePoint(0x1F600 + Math.random() * 69/*56*/ | 0) : "🌍" // emoji
   });
 };
 
 // Vec2 lib
-var Vec2 = (x,y) => ({x,y});
-var length = v => dot(v,v)**.5;
-var add = (v,w) => Vec2(v.x + w.x, v.y + w.y);
-var substract = (v,w) => add(v, scale(w, -1));
-var scale = (v,n) => Vec2(v.x * n, v.y * n);
-var dot = (v,w) => v.x * w.x + v.y * w.y;
-var cross = (v,w) => v.x * w.y - v.y * w.x;
-var normalize = v => scale(v, 1 / (length(v) || 1));
+var Vec2 = (x,y,t) => ({x,y});
+var length = (x,y,t)=> dot(x,x)**.5;
+var add = (x,y,t) => Vec2(x.x+y.x, x.y+y.y);
+var substract = (x,y,t) => add(x, scale(y, -1));
+var scale = (x,y,t) => Vec2(x.x*y, x.y*y);
+var dot = (x,y,t) => x.x*y.x + x.y*y.y;
+var cross = (x,y,t) => x.x*y.y - x.y*y.x;
+var normalize = (x,y,t) => scale(x, 1 / (length(x) || 1));
 
 // Globals
 var objects = [];
 
 // Init scene
-Circle(Vec2(800, 800), 400, 0);
+Circle(Vec2(800, 1000), 600, 0);
+
 for(i = 99; i--; ){
-  Circle(Vec2(Math.random() * 1500, Math.random() * 800 - 700));
+  Circle(Vec2(Math.random() * 900 + 300, Math.random() * 900 - 700));
 }
 
-onclick = e => {
-  Circle(Vec2(e.pageX, e.pageY));
-}
+onclick = e => Circle(Vec2(e.pageX, e.pageY));
 
 // Loop
 setInterval(
 
   e => {
-    
-    // Draw
-    a.width ^= 0;
-    for(i = objects.length; i--;){
-      c.save();
-      //c.beginPath();
-      c.translate(objects[i].C.x, objects[i].C.y);
-      c.rotate(objects[i].B);
-      c.arc(0, 0, objects[i].R, 0, 7);
-      //c.lineWidth = 3;
-      c.font = objects[i].R * 1.9 + "px a";
-      //c.textAlign = "center";
-      //if(objects[i].M)
-      c.fillText(objects[i].Z,-objects[i].R*1.24,objects[i].R * .66);
-      //else c.stroke();
-      c.restore();
-    }
   
+    a.width ^= 0;
+
     // Compute collisions
     for(i = objects.length; i--;){
       for(j = objects.length; j-->i;){
-        for(k = 15; k--;){
+        //for(k = 15; k--;){
             b = objects[i];
             d = objects[j];
             //if((b.M && b.C.y < 400) || (d.M && d.C.y < 400)){ // perf
@@ -95,10 +77,8 @@ setInterval(
             // Test collision
 
             e = substract(d.C, b.C);
-            f = b.R + d.R;
-            g = length(e);
-            if(g < f){
-              D = f - g, // depth
+            if(length(e) < b.R + d.R){
+              D = b.R + d.R - length(e), // depth
               N = normalize(e), // normal
               S = add(d.C, scale(normalize(scale(e, -1)), d.R)), // start
               E = add(S, scale(N, D)) // end
@@ -120,15 +100,12 @@ setInterval(
                 //newV = V + D cross R
                 n = substract(add(d.V, Vec2(-1 * d.D * m.y, d.D * m.x)), add(b.V, Vec2(-1 * b.D * l.y, b.D * l.x)));
 
-                // Relative velocity in normal direction
-                o = dot(n, N);
-
                 //if objects moving apart ignore
-                if(o < 0){
+                if(dot(n, N) < 0){
 
                   // Calc t scalar
                   // the formula of s can be found in http://www.myphysicslab.com/collision.html
-                  s = (-1.5 * o) / (b.M + d.M + cross(l, N) ** 2 * b.I + cross(m, N) ** 2 * d.I);
+                  s = (-1.5 * dot(n, N)) / (b.M + d.M + cross(l, N) ** 2 * b.I + cross(m, N) ** 2 * d.I);
 
                   //t is in direction of normal ( from b to d)
                   t = scale(N, s);
@@ -144,20 +121,37 @@ setInterval(
                   //t is from b to d (in opposite direction of velocity)
                   t = scale(u, x);
                   b.V = substract(b.V, scale(t, b.M));
-                  d.V = add(d.V, scale(t,d.M));
+                  d.V = add(d.V, scale(t, d.M));
                   b.D -= cross(l, u) * x * b.I;
                   d.D += cross(m, u) * x * d.I;
                 }
               //}
-            }
+           // }
           }
         }
       }
+      
       // Update scene
       b.V = add(b.V, scale(b.A, .01));
       b.C = add(b.C, scale(b.V, .01));
-      b.D += objects[i].E * .01;
-      b.B += objects[i].D * .01;
+      b.D += b.E * .01;
+      b.B += b.D * .01;
+      
+      // Draw
+      
+      c.save();
+      //c.beginPath();
+      c.translate(b.C.x, b.C.y);
+      c.rotate(b.B);
+      c.arc(0, 0, b.R, 0, 7);
+      //c.lineWidth = 3;
+      c.font = b.R * 1.9 + "px a";
+      //c.textAlign = "center";
+      //if(objects[i].M)
+      c.fillText(b.Z,-b.R*1.24,b.R * .66);
+      //else c.stroke();
+      c.restore();
+      //}
     }
   },
   9
