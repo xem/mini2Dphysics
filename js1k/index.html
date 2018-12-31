@@ -28,13 +28,13 @@ var Circle = (C, R = Math.random() * 30 + 10, M = 1/R) =>
     I: 0, // inertia
     V: Vec2(0, 0), // velocity (speed)
     M, // inverseMass (0 if immobile)
-    A: Vec2(0, M ? 200 : 0), // acceleration
+    A: Vec2(0, M ? 250 : 0), // acceleration
     B: M ? Math.random() * 7 : 0, // angle
     D: 0, // angle velocity
     E: 0, // angle acceleration,
     R, // radius
+    Z: String.fromCodePoint(0x1F600 + Math.random() * 69/*56*/ | 0) // emoji
     //I: M,   // (here it's simplified as M) Inertia = mass * radius ^ 2. 12 is a magic constant that can be changed
-    Z: M ? String.fromCodePoint(0x1F600 + Math.random() * 69/*56*/ | 0) : "🌍" // emoji
   });
 
 // Vec2 lib
@@ -140,18 +140,18 @@ setInterval(
       // Draw
       
       c.save();
-      //c.beginPath();
+      c.beginPath();
       c.translate(b.C.x, b.C.y);
       c.rotate(b.B);
       c.arc(0, 0, b.R, 0, 7);
       //c.lineWidth = 3;
       c.font = b.R * 1.9 + "px a";
       //c.textAlign = "center";
-      //if(objects[i].M)
-      c.fillText(b.Z, -b.R * 1.24, b.R * .67);
-      //else c.stroke();
+      if(objects[i].M)
+        c.fillText(b.Z, -b.R * 1.24, b.R * .67);
+      else
+        c.fill();
       c.restore();
-      //}
     }
   },
   9
