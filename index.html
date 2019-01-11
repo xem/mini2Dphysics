@@ -1,6 +1,5 @@
 ﻿<canvas id=a width=800 height=450></canvas>
 <script>
-
 c = a.getContext('2d');
 
 // Vec2 lib
@@ -60,15 +59,8 @@ var updateRigidShape = shape => {
   var dt = .016;
   shape.V = add(shape.V, scale(shape.A, dt));
   shape.AV += shape.AA * dt;
-
-  if(shape.T == "C"){
-    moveCircle(shape, scale(shape.V, dt));
-    rotateCircle(shape, shape.AV * dt);
-  }
-  else if(shape.T == "R"){
-    moveRectangle(shape, scale(shape.V, dt));
-    rotateRectangle(shape, shape.AV * dt);
-  }
+  moveShape(shape, scale(shape.V, dt));
+  rotateShape(shape, shape.AV * dt);
 };
 
 var boundTest = (s1, s2) => length(substract(s2.C, s1.C)) <= (s1.B + s2.B);
@@ -119,55 +111,52 @@ var Rectangle = (center, width, height, mass, friction, restitution) => {
   return shape;
 };
 
-var moveCircle = (circle, v) => {
-  circle.SP = add(circle.SP, v);
-  circle.C = add(circle.C, v);
-};
-
-var moveRectangle = (rect, v) => {
-  for(var i = 0; i < rect.X.length; i++){
-    rect.X[i] = add(rect.X[i], v);
+var moveShape = (shape, v) => {
+  shape.C = add(shape.C, v);
+  if(shape.T == "C"){
+    shape.SP = add(shape.SP, v);
   }
-  rect.C = add(rect.C, v);
-};
-
-var drawCircle = circle => {
-  c.beginPath();
-
-  // circle
-  c.arc(circle.C.x, circle.C.y, circle.RA, 0, 7);
-
-  // line
-  c.moveTo(circle.SP.x, circle.SP.y);
-  c.lineTo(circle.C.x, circle.C.y);
   
-  c.closePath();
-  c.stroke();
-};
-
-var drawRectangle = rect => {
-  c.save();
-
-  c.translate(rect.X[0].x, rect.X[0].y);
-  c.rotate(rect.AN);
-  c.strokeRect(0, 0, rect.W, rect.H);
-
-  c.restore();
-};
-
-// rotate angle is counterclockwise
-var rotateCircle = (circle, angle) => {
-  circle.AN += angle;
-  circle.SP = rotate(circle.SP, circle.C, angle);
-};
-
-var rotateRectangle = (rect, angle) => {
-  rect.AN += angle;
-  for(var i = 0; i < rect.X.length; i++){
-    rect.X[i] = rotate(rect.X[i], rect.C, angle);
+  else if(shape.T == "R"){
+    for(var i = 0; i < shape.X.length; i++){
+      shape.X[i] = add(shape.X[i], v);
+    }
   }
-  computeRectNormals(rect);
+}
+
+var drawShape = shape => {
+
+  if(shape.T == "C"){
+    c.beginPath();
+    c.arc(shape.C.x, shape.C.y, shape.RA, 0, 7);
+    c.moveTo(shape.SP.x, shape.SP.y);
+    c.lineTo(shape.C.x, shape.C.y);
+    c.closePath();
+    c.stroke();
+  }
+  
+  else if(shape.T == "R"){
+    c.save();
+    c.translate(shape.X[0].x, shape.X[0].y);
+    c.rotate(shape.AN);
+    c.strokeRect(0, 0, shape.W, shape.H);
+    c.restore();
+  }
 };
+
+var rotateShape = (shape, angle) => {
+  shape.AN += angle;
+  if(shape.T == "C"){
+    shape.SP = rotate(shape.SP, shape.C, angle);
+  }
+  
+  else if(shape.T == "R"){
+    for(var i = 0; i < shape.X.length; i++){
+      shape.X[i] = rotate(shape.X[i], shape.C, angle);
+    }
+    computeRectNormals(shape);
+  }
+}
 
 var tmpSupportPoint;
 var tmpSupportPointDist;
@@ -406,21 +395,8 @@ var resolveCollision = (s1, s2, collisionInfo) => {
   // correct positions
   var num = collisionInfo.D / (s1.IM + s2.IM) * .8; // .8 = poscorrectionrate = percentage of separation to project objects
   var correctionAmount = scale(collisionInfo.N, num);
-  
-  if(s1.T == "C"){
-    moveCircle(s1, scale(correctionAmount, -s1.IM));
-  }
-  else if(s1.T == "R"){
-    moveRectangle(s1, scale(correctionAmount, -s1.IM));
-  }
-  
-  if(s2.T == "C"){
-    moveCircle(s2, scale(correctionAmount, s2.IM));
-  }
-  else if(s2.T == "R"){
-    moveRectangle(s2, scale(correctionAmount, s2.IM));
-  }
-  
+  moveShape(s1, scale(correctionAmount, -s1.IM));
+  moveShape(s2, scale(correctionAmount, s2.IM));
   var n = collisionInfo.N;
 
   // the direction of collisionInfo is always from s1 to s2
@@ -489,31 +465,25 @@ var resolveCollision = (s1, s2, collisionInfo) => {
 };
 
 // Init scene
-rotateRectangle(Rectangle(Vec2(500, 200), 400, 20, 0, 0.3, 0), 2.8);
+rotateShape(Rectangle(Vec2(500, 200), 400, 20, 0, 0.3, 0), 2.8);
 Rectangle(Vec2(200, 400), 400, 20, 0, 1, 0.5);
 Rectangle(Vec2(100, 200), 200, 20, 0);
 Rectangle(Vec2(10, 360), 20, 100, 0, 0, 1);
 
 for(var i = 0; i < 10; i++){
-  rotateCircle(Circle(Vec2(Math.random() * 800, Math.random() * 450 / 2), Math.random() * 20 + 10, Math.random() * 30, Math.random(), Math.random()), Math.random() * 7);
+  rotateShape(Circle(Vec2(Math.random() * 800, Math.random() * 450 / 2), Math.random() * 20 + 10, Math.random() * 30, Math.random(), Math.random()), Math.random() * 7);
   Rectangle(Vec2(Math.random() * 800, Math.random() * 450 / 2), Math.random() * 20 + 10, Math.random() * 20 + 10, Math.random() * 30, Math.random(), Math.random());
 }
 
 // Loop
 setInterval(
-
-  ()=>{
+  () => {
     
     // Draw
     a.width ^= 0;
     for(var i = 0; i < objects.length; i++){
       c.strokeStyle = '#888';
-      if(objects[i].T == "C"){
-        drawCircle(objects[i]);
-      }
-      else if(objects[i].T == "R"){
-        drawRectangle(objects[i]);
-      }
+      drawShape(objects[i]);
     }
   
     // Compute collisions
