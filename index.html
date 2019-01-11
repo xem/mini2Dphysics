@@ -1,4 +1,609 @@
 ﻿<canvas id=a width=800 height=450></canvas>
-<script>c = a.getContext('2d')</script>
-<script src=rigidshape.js></script>
-<script src=global.js></script>
+<script>
+
+c = a.getContext('2d');
+
+// Vec2 lib
+var Vec2 = (x,y) => ({x,y});
+var length = v => dot(v,v)**.5;
+var add = (v,w) => Vec2(v.x + w.x, v.y + w.y);
+var substract = (v,w) => add(v, scale(w, -1));
+var scale = (v,n) => Vec2(v.x * n, v.y * n);
+var dot = (v,w) => v.x * w.x + v.y * w.y;
+var cross = (v,w) => v.x * w.y - v.y * w.x;
+var rotate = (v, center, angle, x = v.x - center.x, y = v.y - center.y) => Vec2(x * Math.cos(angle) - y * Math.sin(angle) + center.x, x * Math.sin(angle) + y * Math.cos(angle) + center.y);
+var normalize = v => scale(v, 1 / (length(v) || 1));
+var distance = (v,w) => length(substract(v,w));
+
+// Globals
+var mGravity = Vec2(0, 100);
+var objects = [];
+
+// Collision info (circle vs circle)
+var collisionInfo = {};
+
+// Collision info (rect vs any)
+var collisionInfoR1 = {};
+var collisionInfoR2 = {};
+
+// Collision info helpers
+var setInfo = (collision, D, N, S) => {
+  //console.log(D, N, S);
+  collision.D = D; // depth
+  collision.N = N; // normal
+  collision.S = S; // start
+  collision.E = add(S, scale(N, D)); // end
+};
+
+var changeDir = (tmp) => {
+  collisionInfo.N = scale(collisionInfo.N, -1);
+  tmp = collisionInfo.S;
+  collisionInfo.S = collisionInfo.E;
+  collisionInfo.E = tmp;
+};
+
+var RigidShape = (center, mass, friction=.8, restitution=.2) => {
+  var shape = {};
+  shape.C = center; // center
+  shape.I = 0; // inertia
+  shape.F = friction; // friction
+  shape.R = restitution; // restitution (bouncing)
+  shape.V = Vec2(0, 0); // velocity (speed)
+  shape.IM = mass ? 1 / mass : 0; // inverseMass (0 if immobile)
+  shape.A = mass ? mGravity : Vec2(0, 0); // acceleration
+  shape.AN = 0; // angle
+  shape.AV = 0; // angle velocity
+  shape.AA = 0; // angle acceleration
+  shape.B = 0; // bounds radius
+  objects.push(shape);
+  return shape;
+};
+
+var updateRigidShape = shape => {
+
+  var dt = .016;
+  shape.V = add(shape.V, scale(shape.A, dt));
+  shape.AV += shape.AA * dt;
+
+  if(shape.T == "Circle"){
+    moveCircle(shape, scale(shape.V, dt));
+    rotateCircle(shape, shape.AV * dt);
+  }
+  else if(shape.T == "Rectangle"){
+    moveRectangle(shape, scale(shape.V, dt));
+    rotateRectangle(shape, shape.AV * dt);
+  }
+};
+
+var boundTest = (s1, s2) => {
+  return length(substract(s2.C, s1.C)) > (s1.B + s2.B) ? false : true;
+};
+
+var Circle = (center, radius, mass, friction, restitution) => {
+  var shape = RigidShape(center, mass, friction, restitution);
+  shape.T = "Circle"; // type
+  shape.RA = radius; // radius
+  shape.B = radius; // bounding radius
+  shape.SP = Vec2(center.x, center.y + radius); // start point (for the line)
+  updateInertiaCircle(shape);
+  return shape;
+};
+
+var Rectangle = (center, width, height, mass, friction, restitution) => {
+
+  var shape = RigidShape(center, mass, friction, restitution);
+  shape.T = "Rectangle";
+  shape.W = width;
+  shape.H = height;
+  shape.B = Math.hypot(width, height) / 2;
+  shape.mVertex = [];
+  shape.mFaceNormal = [];
+
+  // Vertex: 0: TopLeft, 1: TopRight, 2: BottomRight, 3: BottomLeft
+  shape.mVertex[0] = Vec2(center.x - width / 2, center.y - height / 2);
+  shape.mVertex[1] = Vec2(center.x + width / 2, center.y - height / 2);
+  shape.mVertex[2] = Vec2(center.x + width / 2, center.y + height / 2);
+  shape.mVertex[3] = Vec2(center.x - width / 2, center.y + height / 2);
+
+  // mFaceNormal: normal of each face toward outside of rectangle
+  // 0: Top, 1: Right, 2: Bottom, 3:Left
+  shape.mFaceNormal[0] = substract(shape.mVertex[1], shape.mVertex[2]);
+  shape.mFaceNormal[0] = normalize(shape.mFaceNormal[0]);
+  shape.mFaceNormal[1] = substract(shape.mVertex[2], shape.mVertex[3]);
+  shape.mFaceNormal[1] = normalize(shape.mFaceNormal[1]);
+  shape.mFaceNormal[2] = substract(shape.mVertex[3], shape.mVertex[0]);
+  shape.mFaceNormal[2] = normalize(shape.mFaceNormal[2]);
+  shape.mFaceNormal[3] = substract(shape.mVertex[0], shape.mVertex[1]);
+  shape.mFaceNormal[3] = normalize(shape.mFaceNormal[3]);
+
+  updateInertiaRectangle(shape);
+  return shape;
+};
+
+var moveCircle = (circle, s) => {
+  circle.SP = add(circle.SP, s);
+  circle.C = add(circle.C, s);
+};
+
+var moveRectangle = (rect, v) => {
+  var i;
+  for (i = 0; i < rect.mVertex.length; i++) {
+    rect.mVertex[i] = add(rect.mVertex[i], v);
+  }
+  rect.C = add(rect.C, v);
+};
+
+var drawCircle = circle => {
+  c.beginPath();
+
+  // circle
+  c.arc(circle.C.x, circle.C.y, circle.RA, 0, 7);
+
+  // line
+  c.moveTo(circle.SP.x, circle.SP.y);
+  c.lineTo(circle.C.x, circle.C.y);
+  
+  c.closePath();
+  c.stroke();
+};
+
+var drawRectangle = rect => {
+  c.save();
+
+  c.translate(rect.mVertex[0].x, rect.mVertex[0].y);
+  c.rotate(rect.AN);
+  c.strokeRect(0, 0, rect.W, rect.H);
+
+  c.restore();
+};
+
+
+// rotate angle is counterclockwise
+var rotateCircle = (circle, angle) => {
+  circle.AN += angle;
+  circle.SP = rotate(circle.SP, circle.C, angle);
+};
+
+var rotateRectangle = (rect, angle) => {
+  rect.AN += angle;
+  var i;
+  for(i = 0; i < rect.mVertex.length; i++){
+    rect.mVertex[i] = rotate(rect.mVertex[i], rect.C, angle);
+  }
+
+  rect.mFaceNormal[0] = substract(rect.mVertex[1], rect.mVertex[2]);
+  rect.mFaceNormal[0] = normalize(rect.mFaceNormal[0]);
+  rect.mFaceNormal[1] = substract(rect.mVertex[2], rect.mVertex[3]);
+  rect.mFaceNormal[1] = normalize(rect.mFaceNormal[1]);
+  rect.mFaceNormal[2] = substract(rect.mVertex[3], rect.mVertex[0]);
+  rect.mFaceNormal[2] = normalize(rect.mFaceNormal[2]);
+  rect.mFaceNormal[3] = substract(rect.mVertex[0], rect.mVertex[1]);
+  rect.mFaceNormal[3] = normalize(rect.mFaceNormal[3]);
+};
+
+var updateInertiaCircle = circle => {
+  
+  // Inertia=mass * radius^2
+  // 12 is a constant value that can be changed
+  circle.I = circle.IM ? (1 / circle.IM) * (circle.RA * circle.RA) / 12 : 0;
+};
+
+var updateInertiaRectangle = rect => {
+  if(rect.IM === 0){
+    rect.I = 0;
+  }
+  else{
+    
+    // inertia=mass*width^2+height^2
+    // 12 is a constant value that can be changed
+    rect.I = (1 / rect.IM) * (rect.W * rect.W + rect.H * rect.H) / 12;
+    rect.I = 1 / rect.I;
+  }
+};
+
+var SupportStruct = function () {
+  this.mSupportPoint = null;
+  this.mSupportPointDist = 0;
+};
+var tmpSupport = new SupportStruct();
+
+var findSupportPoint = (rect, dir, ptOnEdge) => {
+  
+  // the longest projected length
+  var vToEdge;
+  var projection;
+  tmpSupport.mSupportPointDist = -9999999;
+  tmpSupport.mSupportPoint = null;
+  
+  // check each vector of other object
+  for(var i = 0; i < rect.mVertex.length; i++){
+    vToEdge = substract(rect.mVertex[i],ptOnEdge);
+    projection = dot(vToEdge, dir);
+    
+    // find the longest distance with certain edge
+    // dir is -n direction, so the distance should be positive     
+    if((projection > 0) && (projection > tmpSupport.mSupportPointDist)){
+      tmpSupport.mSupportPoint = rect.mVertex[i];
+      tmpSupport.mSupportPointDist = projection;
+    }
+  }
+};
+
+var findAxisLeastPenetration = (rect, otherRect, collisionInfo) => {
+
+  //console.log(rect);
+  var n;
+  var supportPoint;
+
+  var bestDistance = 999999;
+  var bestIndex = null;
+
+  var hasSupport = true;
+  var i = 0;
+
+  while((hasSupport) && (i < rect.mFaceNormal.length)){
+    
+    // Retrieve a face normal from A
+    n = rect.mFaceNormal[i];
+
+    // use -n as direction and the vertex on edge i as point on edge
+    var dir = scale(n, -1);
+    var ptOnEdge = rect.mVertex[i];
+    
+    // find the support on B
+    // the point has longest distance with edge i 
+    findSupportPoint(otherRect, dir, ptOnEdge);
+    hasSupport = (tmpSupport.mSupportPoint !== null);
+    
+    // get the shortest support point depth
+    if((hasSupport) && (tmpSupport.mSupportPointDist < bestDistance)){
+      bestDistance = tmpSupport.mSupportPointDist;
+      bestIndex = i;
+      supportPoint = tmpSupport.mSupportPoint;
+    }
+    i++;
+  }
+  
+  if(hasSupport){
+    
+    // all four directions have support point
+    var bestVec = scale(rect.mFaceNormal[bestIndex], bestDistance);
+    setInfo(collisionInfo, bestDistance, rect.mFaceNormal[bestIndex], add(supportPoint, bestVec));
+    //console.log(collisionInfo);
+  }
+  
+  return hasSupport;
+};
+
+var collidedRectCirc = (rect, otherCir, collisionInfo) => {
+
+  var inside = true;
+  var bestDistance = -99999;
+  var nearestEdge = 0;
+  var i, v;
+  var circ2Pos, projection;
+  for(i = 0; i < 4; i++){
+    //find the nearest face for center of circle    
+    circ2Pos = otherCir.C;
+    v = substract(circ2Pos, rect.mVertex[i]);
+    projection = dot(v, rect.mFaceNormal[i]);
+    if(projection > 0){
+      //if the center of circle is outside of rectangle
+      bestDistance = projection;
+      nearestEdge = i;
+      inside = false;
+      break;
+    }
+    if(projection > bestDistance){
+      bestDistance = projection;
+      nearestEdge = i;
+    }
+  }
+  var dis, normal, radiusVec;
+  if(!inside){
+    
+    // the center of circle is outside of rectangle
+    // v1 is from left vertex of face to center of circle 
+    // v2 is from left vertex of face to right vertex of face
+    var v1 = substract(circ2Pos, rect.mVertex[nearestEdge]);
+    var v2 = substract(rect.mVertex[(nearestEdge + 1) % 4], rect.mVertex[nearestEdge]);
+    var dotp = dot(v1, v2);
+    if(dotp < 0){
+      
+      // the center of circle is in corner region of mVertex[nearestEdge]
+      dis = length(v1);
+      
+      // compare the distance with radium to decide collision
+      if(dis > otherCir.RA){
+        return false;
+      }
+
+      normal = normalize(v1);
+      radiusVec = scale(normal, -otherCir.RA);
+      setInfo(collisionInfo, otherCir.RA - dis, normal, add(circ2Pos, radiusVec));
+    }
+    
+    else{
+      
+      // the center of circle is in corner region of mVertex[nearestEdge+1]
+      // v1 is from right vertex of face to center of circle 
+      // v2 is from right vertex of face to left vertex of face
+      v1 = substract(circ2Pos, rect.mVertex[(nearestEdge + 1) % 4]);
+      v2 = scale(v2, -1);
+      dotp = dot(v1, v2); 
+      if(dotp < 0){
+        dis = length(v1);
+        
+        // compare the distance with radium to decide collision
+        if(dis > otherCir.RA){
+          return false;
+        }
+        normal = normalize(v1);
+        radiusVec = scale(normal, -otherCir.RA);
+        setInfo(collisionInfo, otherCir.RA - dis, normal, add(circ2Pos, radiusVec));
+      }
+      
+      else{
+        
+        // the center of circle is in face region of face[nearestEdge]
+        if(bestDistance < otherCir.RA){
+          radiusVec = scale(rect.mFaceNormal[nearestEdge], otherCir.RA);
+          setInfo(collisionInfo, otherCir.RA - bestDistance, rect.mFaceNormal[nearestEdge], substract(circ2Pos, radiusVec));
+        }
+        
+        else{
+          return false;
+        }
+      }
+    }
+  }
+  
+  else{
+    
+    // the center of circle is inside of rectangle
+    radiusVec = scale(rect.mFaceNormal[nearestEdge], otherCir.RA);
+    setInfo(collisionInfo, otherCir.RA - bestDistance, rect.mFaceNormal[nearestEdge], substract(circ2Pos, radiusVec));
+  }
+  return true;
+};
+
+var testCollision = (c1, c2, info) => {
+  
+  var status;
+  
+  // Circle vs circle
+  if(c1.T === "Circle" && c2.T === "Circle"){
+    var vFrom1to2 = substract(c2.C, c1.C);
+    var rSum = c1.RA + c2.RA;
+    var dist = length(vFrom1to2);
+    if (dist > Math.sqrt(rSum * rSum)) {
+      
+      // not overlapping
+      return false;
+    }
+    
+    if (dist !== 0) {
+      
+      // overlapping but not same position
+      var normalFrom2to1 = normalize(scale(vFrom1to2, -1));
+      var radiusC2 = scale(normalFrom2to1, c2.RA);
+      setInfo(collisionInfo, rSum - dist, normalize(vFrom1to2), add(c2.C, radiusC2));
+    
+    } else {
+      
+      // same position
+      if (c1.RA > c2.RA) {
+        setInfo(collisionInfo, rSum, Vec2(0, -1), add(c1.C, Vec2(0, c1.RA)));
+      }
+      
+      else{
+        setInfo(collisionInfo, rSum, Vec2(0, -1), add(c2.C, Vec2(0, c2.RA)));
+      }
+    }
+    return true;
+  }
+  
+  // Rect vs Rect
+  else if(c1.T === "Rectangle" && c2.T === "Rectangle"){
+    var status1 = false;
+    var status2 = false;
+
+    // find Axis of Separation for both rectangles
+    status1 = findAxisLeastPenetration(c1, c2, collisionInfoR1);
+    if(status1){
+      status2 = findAxisLeastPenetration(c2, c1, collisionInfoR2);
+      if(status2){
+        
+        // if both of rectangles are overlapping, choose the shorter normal as the normal     
+        if(collisionInfoR1.D < collisionInfoR2.D){
+          var depthVec = scale(collisionInfoR1.N, collisionInfoR1.D);
+          setInfo(collisionInfo, collisionInfoR1.D, collisionInfoR1.N, substract(collisionInfoR1.S, depthVec));
+        } else {
+          setInfo(collisionInfo, collisionInfoR2.D, scale(collisionInfoR2.N, -1), collisionInfoR2.S);
+        }
+      }
+    }
+    return status1 && status2;
+    
+  }
+  
+  // Circle vs Rect
+  else if(c1.T === "Circle" && c2.T === "Rectangle"){
+    return collidedRectCirc(c2, c1, collisionInfo);
+  }
+  
+  // Rect vs Circle
+  else if(c1.T === "Rectangle" && c2.T === "Circle"){
+    return collidedRectCirc(c1, c2, collisionInfo);
+  }
+  
+};
+
+var resolveCollision = (s1, s2, collisionInfo) => {
+  if ((s1.IM === 0) && (s2.IM === 0)) {
+    return;
+  }
+
+  // correct positions
+  var s1InvMass = s1.IM;
+  var s2InvMass = s2.IM;
+  var num = collisionInfo.D / (s1InvMass + s2InvMass) * .8; // .8 = poscorrectionrate = percentage of separation to project objects
+  var correctionAmount = scale(collisionInfo.N, num);
+  //console.log("s1", s1)
+  //console.log("s2", s2)
+  //console.log("cor", correctionAmount)
+  //console.log("s1im", s1InvMass)
+  //console.log("s2im", s2InvMass);
+  
+  if(s1.T == "Circle"){
+    moveCircle(s1, scale(correctionAmount, -s1InvMass));
+  }
+  else if(s1.T == "Rectangle"){
+    moveRectangle(s1, scale(correctionAmount, -s1InvMass));
+  }
+  
+  if(s2.T == "Circle"){
+    moveCircle(s2, scale(correctionAmount, s2InvMass));
+  }
+  else if(s2.T == "Rectangle"){
+    moveRectangle(s2, scale(correctionAmount, s2InvMass));
+  }
+  
+  var n = collisionInfo.N;
+
+  // the direction of collisionInfo is always from s1 to s2
+  // but the Mass is inversed, so start scale with s2 and end scale with s1
+  var start = scale(collisionInfo.S, s2.IM / (s1.IM + s2.IM));
+  var end = scale(collisionInfo.E, s1.IM / (s1.IM + s2.IM));
+  var p = add(start, end);
+  // r is vector from center of object to collision point
+  var r1 = substract(p, s1.C);
+  var r2 = substract(p, s2.C);
+
+  // newV = V + AV cross R
+  var v1 = add(s1.V, Vec2(-1 * s1.AV * r1.y, s1.AV * r1.x));
+  var v2 = add(s2.V, Vec2(-1 * s2.AV * r2.y, s2.AV * r2.x));
+  var relativeVelocity = substract(v2, v1);
+
+  // Relative velocity in normal direction
+  var rVelocityInNormal = dot(relativeVelocity, n);
+
+  // if objects moving apart ignore
+  if (rVelocityInNormal > 0) {
+    return;
+  }
+
+  // compute and apply response impulses for each object  
+  var newRestituion = Math.min(s1.R, s2.R);
+  var newFriction = Math.min(s1.F, s2.F);
+
+  //R cross N
+  var R1crossN = cross(r1, n);
+  var R2crossN = cross(r2, n);
+
+  // Calc impulse scalar
+  // the formula of jN can be found in http://www.myphysicslab.com/collision.html
+  var jN = -(1 + newRestituion) * rVelocityInNormal;
+  jN = jN / (s1.IM + s2.IM +
+      R1crossN * R1crossN * s1.I +
+      R2crossN * R2crossN * s2.I);
+
+  // impulse is in direction of normal ( from s1 to s2)
+  var impulse = scale(n, jN);
+  // impulse = F dt = m * ?v
+  // ?v = impulse / m
+  s1.V = substract(s1.V, scale(impulse, s1.IM));
+  s2.V = add(s2.V, scale(impulse, s2.IM));
+  s1.AV -= R1crossN * jN * s1.I;
+  s2.AV += R2crossN * jN * s2.I;
+  var tangent = substract(relativeVelocity, scale(n, dot(relativeVelocity, n)));
+
+  // relativeVelocity.dot(tangent) should less than 0
+  tangent = scale(normalize(tangent), -1);
+  var R1crossT = cross(r1, tangent);
+  var R2crossT = cross(r2, tangent);
+  var jT = -(1 + newRestituion) * dot(relativeVelocity, tangent) * newFriction;
+  jT = jT / (s1.IM + s2.IM + R1crossT * R1crossT * s1.I + R2crossT * R2crossT * s2.I);
+
+  // friction should less than force in normal direction
+  if (jT > jN) {
+    jT = jN;
+  }
+
+  // impulse is from s1 to s2 (in opposite direction of velocity)
+  impulse = scale(tangent, jT);
+  s1.V = substract(s1.V, scale(impulse, s1.IM));
+  s2.V = add(s2.V, scale(impulse,s2.IM));
+  s1.AV -= R1crossT * jT * s1.I;
+  s2.AV += R2crossT * jT * s2.I;
+};
+
+// Init scene
+var r1 = Rectangle(Vec2(500, 200), 400, 20, 0, 0.3, 0);
+rotateRectangle(r1, 2.8);
+var r2 = Rectangle(Vec2(200, 400), 400, 20, 0, 1, 0.5);
+var r3 = Rectangle(Vec2(100, 200), 200, 20, 0);
+var r4 = Rectangle(Vec2(10, 360), 20, 100, 0, 0, 1);
+
+for (var i = 0; i < 10; i++){
+  var r1 = Circle(Vec2(Math.random() * 800, Math.random() * 450 / 2), Math.random() * 20 + 10, Math.random() * 30, Math.random(), Math.random());
+  rotateCircle(r1, Math.random() * 7);
+  var r1 = Rectangle(Vec2(Math.random() * 800, Math.random() * 450 / 2), Math.random() * 20 + 10, Math.random() * 20 + 10, Math.random() * 30, Math.random(), Math.random());
+  //rotateRectangle(r1, Math.random() * 7);
+}
+
+// Loop
+setInterval(
+
+  ()=>{
+    
+    // Draw
+    a.width ^= 0;
+    for(var i = 0; i < objects.length; i++){
+      c.strokeStyle = '#888';
+      if(objects[i].T == "Circle"){
+        drawCircle(objects[i]);
+      }
+      else if(objects[i].T == "Rectangle"){
+        drawRectangle(objects[i]);
+      }
+    }
+  
+    // Compute collisions
+    for(var k = 0; k < 15; k++){
+      for(var i = 0; i < objects.length; i++){
+        for(var j = i + 1; j < objects.length; j++){
+          
+          // Test bounds
+          if(boundTest(objects[i], objects[j])){
+          
+            //console.log("bound")
+            
+            // Test collision
+            if(testCollision(objects[i], objects[j], collisionInfo)){
+              
+              //console.log("collide")
+              
+              
+              // Make sure the normal is always from object[i] to object[j]
+              if(dot(collisionInfo.N, substract(objects[j].C, objects[i].C)) < 0){
+                changeDir();
+              }
+              
+              // Resolve collision
+              resolveCollision(objects[i], objects[j], collisionInfo);
+            }
+          }
+        }
+      }
+    }
+  
+    // Update scene
+    for(i = 0; i < objects.length; i++){
+      updateRigidShape(objects[i]);
+    }
+  },
+  16
+);
+
+</script>

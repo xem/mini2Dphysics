@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<!--
+To change this license header, choose License Headers in Project Properties.
+To change this template file, choose Tools | Templates
+and open the template in the editor.
+-->
+<html>
+    <head>   
+        <title>PhysicsEngine</title>
+        <link rel ="icon" type ="image/x-icon" href="./favicon.jpg">
+    </head>
+    <body onkeydown="return userControl(event);" 
+          onload="
+            var game = new MyGame();
+            gEngine.Core.initializeEngineCore()">
+        
+        <table style="padding: 2px">
+            <tr>
+                <td> 
+                    <div>
+                        <canvas id="canvas"></canvas>    
+                    </div>
+                </td>
+                <td>
+                    <div id="uiEchoString">  </div>
+                </td>
+            </tr>
+        </table>
+        
+        
+        
+        
+        <script type="text/javascript" src="Vec2.js"></script>
+        <script type="text/javascript" src="CollisionInfo.js"></script>
+
+        <script type="text/javascript" src="RigidShape.js"></script>  
+        <script type="text/javascript" src="Circle.js"></script>  
+        <script type="text/javascript" src="Rectangle.js"></script>     
+        <script type="text/javascript" src="Circle_collision.js"></script>  
+        <script type="text/javascript" src="Rectangle_collision.js"></script>    
+        
+        <script type="text/javascript" src="Physics.js"></script>
+        <script type="text/javascript" src="Core.js"></script>
+
+        <script type="text/javascript" src="MyGame.js"></script>
+        <script type="text/javascript" src="UserControl.js"></script>
+
+    </body>
+</html>
