@@ -292,16 +292,14 @@ var collidedRectCirc = (rect, otherCir, collisionInfo) => {
           return false;
         }
         normal = normalize(v1);
-        radiusVec = scale(normal, -otherCir.RA);
-        setInfo(collisionInfo, otherCir.RA - dis, normal, add(circ2Pos, radiusVec));
+        setInfo(collisionInfo, otherCir.RA - dis, normal, add(circ2Pos, scale(normal, -otherCir.RA)));
       }
       
       else{
         
         // the center of circle is in face region of face[nearestEdge]
         if(bestDistance < otherCir.RA){
-          radiusVec = scale(rect.N[nearestEdge], otherCir.RA);
-          setInfo(collisionInfo, otherCir.RA - bestDistance, rect.N[nearestEdge], substract(circ2Pos, radiusVec));
+          setInfo(collisionInfo, otherCir.RA - bestDistance, rect.N[nearestEdge], substract(circ2Pos, scale(rect.N[nearestEdge], otherCir.RA)));
         }
         
         else{
