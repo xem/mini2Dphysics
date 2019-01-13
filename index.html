@@ -38,38 +38,35 @@ var setInfo = (collision, D, N, S) => {
 };
 
 // New shape
-var RigidShape = (center, mass, friction, restitution, type, radius, width, height, shape) => {
+var RigidShape = (C, mass, F, R, T, B, W, H, shape) => {
   shape = {
-    T: type, // 0 circle / 1 rectangle
-    C: center, // center
-    I: 0, // inertia
-    F: friction, // friction
-    R: restitution, // restitution (bouncing)
+    T, // 0 circle / 1 rectangle
+    C, // center
+    F, // friction
+    R, // restitution (bouncing)
     M: mass ? 1 / mass : 0, // inverseMass (0 if immobile)
     V: Vec2(0, 0), // velocity (speed)
     A: mass ? mGravity : Vec2(0, 0), // acceleration
     G: 0, // angle
-    AV: 0, // angle velocity
-    AA: 0, // angle acceleration
-    B: radius, // (bounds) radius
-    W: width, // width
-    H: height, // height
-    I: type // inertia
-      ? (Math.hypot(width, height) / 2, mass > 0 ? 1 / (mass * (width ** 2 + height ** 2) / 12) : 0) // rectangle
-      : (mass > 0 ? (mass * radius ** 2) / 12 : 0), // circle
-    N: [] // face normals array (rectangles)
+    v: 0, // angle velocity
+    a: 0, // angle acceleration
+    B, // (bounds) radius
+    W, // width
+    H, // height
+    I: T // inertia
+      ? (Math.hypot(W, H) / 2, mass > 0 ? 1 / (mass * (W ** 2 + H ** 2) / 12) : 0) // rectangle
+      : (mass > 0 ? (mass * B ** 2) / 12 : 0), // circle
+    N: [], // face normals array (rectangles)
+    X: [ // Vertex: 0: TopLeft, 1: TopRight, 2: BottomRight, 3: BottomLeft (rectangles)
+      Vec2(C.x - W / 2, C.y - H / 2),
+      Vec2(C.x + W / 2, C.y - H / 2),
+      Vec2(C.x + W / 2, C.y + H / 2),
+      Vec2(C.x - W / 2, C.y + H / 2)
+    ]
   };
   
   // Prepare rectangle
-  if(type /* == 1 */){
-  
-    // Vertex: 0: TopLeft, 1: TopRight, 2: BottomRight, 3: BottomLeft
-    shape.X = [
-      Vec2(center.x - width / 2, center.y - height / 2),
-      Vec2(center.x + width / 2, center.y - height / 2),
-      Vec2(center.x + width / 2, center.y + height / 2),
-      Vec2(center.x - width / 2, center.y + height / 2)
-    ];
+  if(T /* == 1 */){
     computeRectNormals(shape);
   }
   objects.push(shape);
@@ -131,7 +128,7 @@ var findAxisLeastPenetration = (rect, otherRect, collisionInfo) => {
   tmpSupportPoint,
   tmpSupportPointDist;
 
-  for(i = 0; hasSupport && i < 4; i++){
+  for(i = 4; hasSupport && i--;){
     
     // Retrieve a face normal from A
     n = rect.N[i];
@@ -362,9 +359,9 @@ var resolveCollision = (s1, s2, collisionInfo) => {
   r1 = substract(p, s1.C),
   r2 = substract(p, s2.C),
 
-  // newV = V + AV cross R
-  v1 = add(s1.V, Vec2(-1 * s1.AV * r1.y, s1.AV * r1.x)),
-  v2 = add(s2.V, Vec2(-1 * s2.AV * r2.y, s2.AV * r2.x)),
+  // newV = V + v cross R
+  v1 = add(s1.V, Vec2(-1 * s1.v * r1.y, s1.v * r1.x)),
+  v2 = add(s2.V, Vec2(-1 * s2.v * r2.y, s2.v * r2.x)),
   relativeVelocity = substract(v2, v1),
 
   // Relative velocity in normal direction
@@ -390,12 +387,13 @@ var resolveCollision = (s1, s2, collisionInfo) => {
 
   // impulse is in direction of normal ( from s1 to s2)
   impulse = scale(n, jN);
+  
   // impulse = F dt = m * ?v
   // ?v = impulse / m
   s1.V = substract(s1.V, scale(impulse, s1.M));
   s2.V = add(s2.V, scale(impulse, s2.M));
-  s1.AV -= R1crossN * jN * s1.I;
-  s2.AV += R2crossN * jN * s2.I;
+  s1.v -= R1crossN * jN * s1.I;
+  s2.v += R2crossN * jN * s2.I;
   var
   tangent = scale(normalize(substract(relativeVelocity, scale(n, dot(relativeVelocity, n)))), -1),
   R1crossT = cross(r1, tangent),
@@ -411,8 +409,8 @@ var resolveCollision = (s1, s2, collisionInfo) => {
   impulse = scale(tangent, jT);
   s1.V = substract(s1.V, scale(impulse, s1.M));
   s2.V = add(s2.V, scale(impulse,s2.M));
-  s1.AV -= R1crossT * jT * s1.I;
-  s2.AV += R2crossT * jT * s2.I;
+  s1.v -= R1crossT * jT * s1.I;
+  s2.v += R2crossT * jT * s2.I;
 };
 
 // Loop
@@ -480,8 +478,8 @@ setInterval(
       // Update position/rotation
       objects[i].V = add(objects[i].V, scale(objects[i].A, 1/60));
       moveShape(objects[i], scale(objects[i].V, 1/60));
-      objects[i].AV += objects[i].AA * 1/60;
-      rotateShape(objects[i], objects[i].AV * 1/60);
+      objects[i].v += objects[i].a * 1/60;
+      rotateShape(objects[i], objects[i].v * 1/60);
     }
   },
   16
