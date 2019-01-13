@@ -38,65 +38,42 @@ var setInfo = (collision, D, N, S) => {
 };
 
 // New shape
-var RigidShape = (center, mass, friction, restitution, shape = {}) => {
-  shape.C = center; // center
-  shape.I = 0; // inertia
-  shape.F = friction; // friction
-  shape.R = restitution; // restitution (bouncing)
-  shape.V = Vec2(0, 0); // velocity (speed)
-  shape.IM = mass ? 1 / mass : 0; // inverseMass (0 if immobile)
-  shape.A = mass ? mGravity : Vec2(0, 0); // acceleration
-  shape.AN = 0; // angle
-  shape.AV = 0; // angle velocity
-  shape.AA = 0; // angle acceleration
-  shape.B = 0; // bounds radius
+var RigidShape = (center, mass, friction, restitution, type, radius, width, height, shape) => {
+  shape = {
+    T: type, // 0 circle / 1 rectangle
+    C: center, // center
+    I: 0, // inertia
+    F: friction, // friction
+    R: restitution, // restitution (bouncing)
+    M: mass ? 1 / mass : 0, // inverseMass (0 if immobile)
+    V: Vec2(0, 0), // velocity (speed)
+    A: mass ? mGravity : Vec2(0, 0), // acceleration
+    G: 0, // angle
+    AV: 0, // angle velocity
+    AA: 0, // angle acceleration
+    B: radius, // (bounds) radius
+    W: width, // width
+    H: height, // height
+    I: type // inertia
+      ? (Math.hypot(width, height) / 2, mass > 0 ? 1 / (mass * (width ** 2 + height ** 2) / 12) : 0) // rectangle
+      : (mass > 0 ? (mass * radius ** 2) / 12 : 0), // circle
+    N: [] // face normals array (rectangles)
+  };
+  
+  // Prepare rectangle
+  if(type /* == 1 */){
+  
+    // Vertex: 0: TopLeft, 1: TopRight, 2: BottomRight, 3: BottomLeft
+    shape.X = [
+      Vec2(center.x - width / 2, center.y - height / 2),
+      Vec2(center.x + width / 2, center.y - height / 2),
+      Vec2(center.x + width / 2, center.y + height / 2),
+      Vec2(center.x - width / 2, center.y + height / 2)
+    ];
+    computeRectNormals(shape);
+  }
   objects.push(shape);
   return shape;
-};
-
-// New circle
-var Circle = (center, radius, mass, friction, restitution, shape) => {
-  shape = RigidShape(center, mass, friction, restitution);
-  shape.T = 0; // Type = Circle (0)
-  shape.B = shape.RA = radius; // Bounding circle radius (equal to radius)
-  
-  // Set inertia (mass*radius^2)
-  // 12 is a constant value that can be changed
-  shape.I = shape.IM > 0 ? (1 / shape.IM) * (shape.RA * shape.RA) / 12 : 0;
-  
-  return shape;
-};
-
-// New rectangle
-var Rectangle = (center, width, height, mass, friction, restitution, shape) => {
-  shape = RigidShape(center, mass, friction, restitution);
-  shape.T = 1; // Type = rectangle (1)
-  shape.W = width;
-  shape.H = height;
-  shape.B = Math.hypot(width, height) / 2; // Bounding circle radius
-  shape.X = []; // vertex array
-  shape.N = []; // face normals array
-
-  // Vertex: 0: TopLeft, 1: TopRight, 2: BottomRight, 3: BottomLeft
-  shape.X[0] = Vec2(center.x - width / 2, center.y - height / 2);
-  shape.X[1] = Vec2(center.x + width / 2, center.y - height / 2);
-  shape.X[2] = Vec2(center.x + width / 2, center.y + height / 2);
-  shape.X[3] = Vec2(center.x - width / 2, center.y + height / 2);
-
-  computeRectNormals(shape);
-  
-  // Set inertia (mass*width^2+height^2)
-  shape.I = shape.IM > 0 ? 1 / ((1 / shape.IM) * (shape.W * shape.W + shape.H * shape.H) / 12) : 0;
-  
-  return shape;
-};
-
-// Update a shape position/angle according to its velocity and acceleration
-var updateRigidShape = shape => {
-  shape.V = add(shape.V, scale(shape.A, .016));
-  shape.AV += shape.AA * .016;
-  moveShape(shape, scale(shape.V, .016));
-  rotateShape(shape, shape.AV * .016);
 };
 
 // Move a shape along a vector
@@ -106,7 +83,7 @@ var moveShape = (shape, v, i) => {
   shape.C = add(shape.C, v);
   
   // Rectangle (move vertex)
-  if(shape.T == 1){
+  if(shape.T){
     for(i = 4; i--;){
       shape.X[i] = add(shape.X[i], v);
     }
@@ -117,39 +94,16 @@ var moveShape = (shape, v, i) => {
 var rotateShape = (shape, angle, i) => {
 
   // Update angle
-  shape.AN += angle;
+  shape.G += angle;
   
   // Rectangle (rotate vertex)
-  if(shape.T == 1){
+  if(shape.T){
     for(i = 4; i--;){
       shape.X[i] = rotate(shape.X[i], shape.C, angle);
     }
     computeRectNormals(shape);
   }
 }
-
-// Draw a shape
-var drawShape = shape => {
-  c.save();
-  c.translate(shape.C.x, shape.C.y);
-  c.rotate(shape.AN);
-  
-  // Circle
-  if(shape.T == 0){
-    c.beginPath();
-    c.arc(0, 0, shape.RA, 0, 7);
-    c.lineTo(0, 0);
-    c.closePath();
-    c.stroke();
-  }
-  
-  // Rectangle
-  else if(shape.T == 1){
-    c.strokeRect(-shape.W / 2, -shape.H / 2, shape.W, shape.H);
-  }
-  
-  c.restore();
-};
 
 // Test if two shapes have intersecting bounding circles
 var boundTest = (s1, s2) => length(substract(s2.C, s1.C)) <= s1.B + s2.B;
@@ -160,7 +114,7 @@ var computeRectNormals = (shape, i) => {
   // N: normal of each face toward outside of rectangle
   // 0: Top, 1: Right, 2: Bottom, 3: Left
   for(i = 4; i--;){
-    shape.N[i] = normalize(substract(shape.X[(i+1)%4], shape.X[(i+2)%4]));
+    shape.N[i] = normalize(substract(shape.X[(i+1) % 4], shape.X[(i+2) % 4]));
   }
 }
 
@@ -173,7 +127,7 @@ var findAxisLeastPenetration = (rect, otherRect, collisionInfo) => {
   supportPoint,
   bestDistance = 1e9,
   bestIndex = -1,
-  hasSupport = true,
+  hasSupport = 1,
   tmpSupportPoint,
   tmpSupportPointDist;
 
@@ -228,46 +182,46 @@ var findAxisLeastPenetration = (rect, otherRect, collisionInfo) => {
 var testCollision = (c1, c2, info) => {
   
   // Circle vs circle
-  if(c1.T == 0 && c2.T == 0){
+  if(!c1.T && !c2.T){
     var
     vFrom1to2 = substract(c2.C, c1.C),
-    rSum = c1.RA + c2.RA,
+    rSum = c1.B + c2.B,
     dist = length(vFrom1to2);
     
-    if (dist > Math.sqrt(rSum * rSum)) {
-      
-      // not overlapping
-      return false;
-    }
+    if(dist <= Math.sqrt(rSum * rSum)){
     
-    if (dist !== 0) {
+    //if(dist){
       
       // overlapping but not same position
       var
       normalFrom2to1 = normalize(scale(vFrom1to2, -1)),
-      radiusC2 = scale(normalFrom2to1, c2.RA);
+      radiusC2 = scale(normalFrom2to1, c2.B);
       setInfo(collisionInfo, rSum - dist, normalize(vFrom1to2), add(c2.C, radiusC2));
-    }
+    //}
     
+    /*
+    // same position
     else {
       
-      // same position
-      if(c1.RA > c2.RA){
-        setInfo(collisionInfo, rSum, Vec2(0, -1), add(c1.C, Vec2(0, c1.RA)));
+      if(c1.B > c2.B){
+        setInfo(collisionInfo, rSum, Vec2(0, -1), add(c1.C, Vec2(0, c1.B)));
       }
       
       else {
-        setInfo(collisionInfo, rSum, Vec2(0, -1), add(c2.C, Vec2(0, c2.RA)));
+        setInfo(collisionInfo, rSum, Vec2(0, -1), add(c2.C, Vec2(0, c2.B)));
       }
     }
-    return true;
+    */
+    }
+    
+    return 1;
   }
   
   // Rect vs Rect
-  if(c1.T == 1 && c2.T == 1){
+  if(c1.T /*== 1*/ && c2.T /*== 1*/){
     var
-    status1 = false,
-    status2 = false;
+    status1 = 0,
+    status2 = 0;
 
     // find Axis of Separation for both rectangles
     status1 = findAxisLeastPenetration(c1, c2, collisionInfoR1);
@@ -290,13 +244,13 @@ var testCollision = (c1, c2, info) => {
   
   // Rectangle vs Circle
   // (c1 is the rectangle and c2 is the circle, invert the two if needed)
-  if(c1.T == 0 && c2.T == 1){
+  if(!c1.T && c2.T /*== 1*/){
     [c1, c2] = [c2, c1];
   }
   
-  if(c1.T == 1 && c2.T == 0){
+  if(c1.T /*== 1*/ && !c2.T){
     var
-    inside = true,
+    inside = 1,
     bestDistance = -1e9,
     nearestEdge = 0,
     i, v,
@@ -312,7 +266,7 @@ var testCollision = (c1, c2, info) => {
         // if the center of circle is outside of c1angle
         bestDistance = projection;
         nearestEdge = i;
-        inside = false;
+        inside = 0;
         break;
       }
       
@@ -326,7 +280,7 @@ var testCollision = (c1, c2, info) => {
     if(inside){
     
       // the center of circle is inside of c1angle
-      setInfo(collisionInfo, c2.RA - bestDistance, c1.N[nearestEdge], substract(circ2Pos, scale(c1.N[nearestEdge], c2.RA)));
+      setInfo(collisionInfo, c2.B - bestDistance, c1.N[nearestEdge], substract(circ2Pos, scale(c1.N[nearestEdge], c2.B)));
     }
     else {
       
@@ -343,11 +297,11 @@ var testCollision = (c1, c2, info) => {
         dis = length(v1);
         
         // compare the distance with radium to decide collision
-        if(dis > c2.RA){
-          return false;
+        if(dis > c2.B){
+          return;
         }
         normal = normalize(v1);
-        setInfo(collisionInfo, c2.RA - dis, normal, add(circ2Pos, scale(normal, -c2.RA)));
+        setInfo(collisionInfo, c2.B - dis, normal, add(circ2Pos, scale(normal, -c2.B)));
       }
       else {
         
@@ -361,48 +315,48 @@ var testCollision = (c1, c2, info) => {
           dis = length(v1);
           
           // compare the distance with radium to decide collision
-          if(dis > c2.RA){
-            return false;
+          if(dis > c2.B){
+            return;
           }
           normal = normalize(v1);
-          setInfo(collisionInfo, c2.RA - dis, normal, add(circ2Pos, scale(normal, -c2.RA)));
+          setInfo(collisionInfo, c2.B - dis, normal, add(circ2Pos, scale(normal, -c2.B)));
         }
         
         else {
           
           // the center of circle is in face region of face[nearestEdge]
-          if(bestDistance < c2.RA){
-            setInfo(collisionInfo, c2.RA - bestDistance, c1.N[nearestEdge], substract(circ2Pos, scale(c1.N[nearestEdge], c2.RA)));
+          if(bestDistance < c2.B){
+            setInfo(collisionInfo, c2.B - bestDistance, c1.N[nearestEdge], substract(circ2Pos, scale(c1.N[nearestEdge], c2.B)));
           }
           
           else {
-            return false;
+            return;
           }
         }
       }
     }
-    return true;
+    return 1;
   }
 };
 
 var resolveCollision = (s1, s2, collisionInfo) => {
-  if (s1.IM == 0 && s2.IM == 0){
+  if(!s1.M && !s2.M){
     return;
   }
 
   // correct positions
   var
-  num = collisionInfo.D / (s1.IM + s2.IM) * .8, // .8 = poscorrectionrate = percentage of separation to project objects
+  num = collisionInfo.D / (s1.M + s2.M) * .8, // .8 = poscorrectionrate = percentage of separation to project objects
   correctionAmount = scale(collisionInfo.N, num),
   n = collisionInfo.N;
-  moveShape(s1, scale(correctionAmount, -s1.IM));
-  moveShape(s2, scale(correctionAmount, s2.IM));
+  moveShape(s1, scale(correctionAmount, -s1.M));
+  moveShape(s2, scale(correctionAmount, s2.M));
 
   // the direction of collisionInfo is always from s1 to s2
   // but the Mass is inversed, so start scale with s2 and end scale with s1
   var
-  start = scale(collisionInfo.S, s2.IM / (s1.IM + s2.IM)),
-  end = scale(collisionInfo.E, s1.IM / (s1.IM + s2.IM)),
+  start = scale(collisionInfo.S, s2.M / (s1.M + s2.M)),
+  end = scale(collisionInfo.E, s1.M / (s1.M + s2.M)),
   p = add(start, end),
   // r is vector from center of object to collision point
   r1 = substract(p, s1.C),
@@ -432,26 +386,21 @@ var resolveCollision = (s1, s2, collisionInfo) => {
 
   // Calc impulse scalar
   // the formula of jN can be found in http://www.myphysicslab.com/collision.html
-  jN = -(1 + newRestituion) * rVelocityInNormal;
-  jN = jN / (s1.IM + s2.IM + R1crossN * R1crossN * s1.I + R2crossN * R2crossN * s2.I);
+  jN = (-(1 + newRestituion) * rVelocityInNormal) / (s1.M + s2.M + R1crossN * R1crossN * s1.I + R2crossN * R2crossN * s2.I),
 
   // impulse is in direction of normal ( from s1 to s2)
-  var impulse = scale(n, jN);
+  impulse = scale(n, jN);
   // impulse = F dt = m * ?v
   // ?v = impulse / m
-  s1.V = substract(s1.V, scale(impulse, s1.IM));
-  s2.V = add(s2.V, scale(impulse, s2.IM));
+  s1.V = substract(s1.V, scale(impulse, s1.M));
+  s2.V = add(s2.V, scale(impulse, s2.M));
   s1.AV -= R1crossN * jN * s1.I;
   s2.AV += R2crossN * jN * s2.I;
-  var tangent = substract(relativeVelocity, scale(n, dot(relativeVelocity, n)));
-
-  // relativeVelocity.dot(tangent) should less than 0
-  tangent = scale(normalize(tangent), -1);
   var
+  tangent = scale(normalize(substract(relativeVelocity, scale(n, dot(relativeVelocity, n)))), -1),
   R1crossT = cross(r1, tangent),
   R2crossT = cross(r2, tangent),
-  jT = -(1 + newRestituion) * dot(relativeVelocity, tangent) * newFriction;
-  jT = jT / (s1.IM + s2.IM + R1crossT * R1crossT * s1.I + R2crossT * R2crossT * s2.I);
+  jT = (-(1 + newRestituion) * dot(relativeVelocity, tangent) * newFriction) / (s1.M + s2.M + R1crossT * R1crossT * s1.I + R2crossT * R2crossT * s2.I);
 
   // friction should less than force in normal direction
   if(jT > jN){
@@ -460,8 +409,8 @@ var resolveCollision = (s1, s2, collisionInfo) => {
 
   // impulse is from s1 to s2 (in opposite direction of velocity)
   impulse = scale(tangent, jT);
-  s1.V = substract(s1.V, scale(impulse, s1.IM));
-  s2.V = add(s2.V, scale(impulse,s2.IM));
+  s1.V = substract(s1.V, scale(impulse, s1.M));
+  s2.V = add(s2.V, scale(impulse,s2.M));
   s1.AV -= R1crossT * jT * s1.I;
   s2.AV += R2crossT * jT * s2.I;
 };
@@ -470,15 +419,11 @@ var resolveCollision = (s1, s2, collisionInfo) => {
 setInterval(
   (i,j,k) => {
     
-    // Draw
+    // Reset
     a.width ^= 0;
-    for(i = objects.length; i--;){
-      //c.strokeStyle = '#888';
-      drawShape(objects[i]);
-    }
   
     // Compute collisions
-    for(k = 0; k < 15; k++){
+    for(k = 9; k--;){
       for(i = objects.length; i--;){
         for(j = objects.length; j-- > i;){
           
@@ -506,13 +451,47 @@ setInterval(
       }
     }
   
-    // Update scene
+    // Draw / Update scene
     for(i = objects.length; i--;){
-      updateRigidShape(objects[i]);
+      
+      // Draw
+      // ----
+      
+      c.save();
+      c.translate(objects[i].C.x, objects[i].C.y);
+      c.rotate(objects[i].G);
+      
+      // Circle
+      if(!objects[i].T){
+        c.beginPath();
+        c.arc(0, 0, objects[i].B, 0, 7);
+        c.lineTo(0, 0);
+        c.closePath();
+        c.stroke();
+      }
+  
+      // Rectangle
+      else {//if(objects[i].T == 1){
+        c.strokeRect(-objects[i].W / 2, -objects[i].H / 2, objects[i].W, objects[i].H);
+      }
+      
+      c.restore();
+      
+      // Update position/rotation
+      objects[i].V = add(objects[i].V, scale(objects[i].A, 1/60));
+      moveShape(objects[i], scale(objects[i].V, 1/60));
+      objects[i].AV += objects[i].AA * 1/60;
+      rotateShape(objects[i], objects[i].AV * 1/60);
     }
   },
   16
 );
+
+// New circle
+var Circle = (center, radius, mass, friction, restitution) => RigidShape(center, mass, friction, restitution, 0, radius);
+
+// New rectangle
+var Rectangle = (center, width, height, mass, friction, restitution) => RigidShape(center, mass, friction, restitution, 1, Math.hypot(width, height)/2, width, height);
 
 // DEMO
 // ====
@@ -523,7 +502,7 @@ Rectangle(Vec2(200, 400), 400, 20, 0, 1, .5);
 Rectangle(Vec2(100, 200), 200, 20, 0, 1, .5);
 Rectangle(Vec2(10, 360), 20, 100, 0, 1, .5);
 
-for(var i = 0; i < 10; i++){
+for(var i = 0; i < 30; i++){
   r = Circle(Vec2(Math.random() * 800, Math.random() * 450 / 2), Math.random() * 20 + 10, Math.random() * 30, Math.random() / 2, Math.random() / 2);
   rotateShape(r, Math.random() * 7);
   r = Rectangle(Vec2(Math.random() * 800, Math.random() * 450 / 2), Math.random() * 20 + 10, Math.random() * 20 + 10, Math.random() * 30, Math.random() / 2, Math.random() / 2);
