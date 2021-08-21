@@ -19,9 +19,12 @@ mini2Dphysics in the wild
 If you use this code here, please fill a Pull Request to add your project to this list.
 I can't wait to see how you used it!
 
+* [Combat Scorched Earth from Outer Space][combat]
 * Your project name and a link to it here
 
 License
 -----
 
 This code is released into the Public Domain.
+
+[combat]: https://jaenis.ch/hobbies/coding/repos/ryuno-ki/js13kgames-2021/src/branch/combat-scorched-earth-from-outer-space/src/js
