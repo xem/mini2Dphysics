@@ -20,6 +20,7 @@ If you use this code here, please fill a Pull Request to add your project to thi
 I can't wait to see how you used it!
 
 * [Combat Scorched Earth from Outer Space][combat]
+* [fedijam-2024][fedijam]
 * [Fresh Fruit Feeder][fff]
 * [O HIII BAD SKATEPARK][ohiii]
 * Your project name and a link to it here
@@ -30,5 +31,6 @@ License
 This code is released into the Public Domain.
 
 [combat]: https://code.jaenis.ch/js13kgames/js13kgames-2021/src/branch/combat-scorched-earth-from-outer-space/journal/2021-08-14.md
+[fedijam]: https://ryuno-ki.itch.io/fedijam-2024
 [fff]: https://feed-fresh-fruit.onrender.com
 [ohiii]: https://js13kgames.com/2024/games/o-hiii-bad-skatepark
