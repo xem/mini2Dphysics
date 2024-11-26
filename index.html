@@ -423,7 +423,7 @@ setInterval(
     // Compute collisions
     for(k = 9; k--;){
       for(i = objects.length; i--;){
-        for(j = objects.length; j-- > i;){
+        for(j = objects.length; --j > i;){
           
           // Test bounds
           if(boundTest(objects[i], objects[j])){
