@@ -336,7 +336,9 @@ var testCollision = (c1, c2, info) => {
   }
 };
 
-var resolveCollision = (s1, s2, collisionInfo) => {
+var resolveCollision = (s1, s2, collisionInfo, skate) => {
+
+  if(collisionInfo.cs) console.log(collisionInfo.cs)
   if(!s1.M && !s2.M){
     return;
   }
@@ -369,7 +371,12 @@ var resolveCollision = (s1, s2, collisionInfo) => {
 
   // if objects moving apart ignore
   if(rVelocityInNormal > 0){
-    return;
+    //if(skate){
+      
+    //}
+    //else {
+      return;
+    //}
   }
 
   // compute and apply response impulses for each object  
@@ -385,7 +392,7 @@ var resolveCollision = (s1, s2, collisionInfo) => {
   // the formula of jN can be found in http://www.myphysicslab.com/collision.html
   jN = (-(1 + newRestituion) * rVelocityInNormal) / (s1.M + s2.M + R1crossN * R1crossN * s1.I + R2crossN * R2crossN * s2.I),
 
-  // impulse is in direction of normal ( from s1 to s2)
+  // impulse is in direction of normal (from s1 to s2)
   impulse = scale(n, jN);
   
   // impulse = F dt = m * ?v
@@ -406,11 +413,20 @@ var resolveCollision = (s1, s2, collisionInfo) => {
   }
 
   // impulse is from s1 to s2 (in opposite direction of velocity)
+  if(!skate){
   impulse = scale(tangent, jT);
   s1.V = substract(s1.V, scale(impulse, s1.M));
   s2.V = add(s2.V, scale(impulse,s2.M));
   s1.v -= R1crossT * jT * s1.I;
   s2.v += R2crossT * jT * s2.I;
+  }
+  else{
+  impulse = scale(tangent, jT*5);
+  s1.V = substract(s1.V, scale(impulse, s1.M));
+  s2.V = add(s2.V, scale(impulse,s2.M));
+  s1.v -= R1crossT * jT * s1.I;
+  s2.v += R2crossT * jT * s2.I;
+  }
 };
 
 // Loop
@@ -424,6 +440,7 @@ setInterval(
     for(k = 9; k--;){
       for(i = objects.length; i--;){
         for(j = objects.length; j-- > i;){
+        
           
           // Test bounds
           if(boundTest(objects[i], objects[j])){
@@ -431,18 +448,19 @@ setInterval(
             // Test collision
             if(testCollision(objects[i], objects[j], collisionInfo)){
               
+              
               // Make sure the normal is always from object[i] to object[j]
               if(dot(collisionInfo.N, substract(objects[j].C, objects[i].C)) < 0){
                 collisionInfo = {
                   D: collisionInfo.D,
                   N: scale(collisionInfo.N, -1),
                   S: collisionInfo.E,
-                  E: collisionInfo.S
+                  E: collisionInfo.S,
                 };
               }
               
               // Resolve collision
-              resolveCollision(objects[i], objects[j], collisionInfo);
+              resolveCollision(objects[i], objects[j], collisionInfo,i==0&&j==1);
             }
           }
         }
@@ -494,16 +512,19 @@ var Rectangle = (center, width, height, mass, friction, restitution) => RigidSha
 // DEMO
 // ====
 
-r = Rectangle(Vec2(500, 200), 400, 20, 0, 1, .5);
-rotateShape(r, 2.8);
-Rectangle(Vec2(200, 400), 400, 20, 0, 1, .5);
-Rectangle(Vec2(100, 200), 200, 20, 0, 1, .5);
-Rectangle(Vec2(10, 360), 20, 100, 0, 1, .5);
+Rectangle(Vec2(500, 155), 40, 5, 200, 1, 0);
+Rectangle(Vec2(500, 145), 20, 20, 100, 1, 0);
 
-for(var i = 0; i < 30; i++){
-  r = Circle(Vec2(Math.random() * 800, Math.random() * 450 / 2), Math.random() * 20 + 10, Math.random() * 30, Math.random() / 2, Math.random() / 2);
+r = Rectangle(Vec2(500, 200), 400, 2, 0, 0, 0);
+rotateShape(r, 2.8);
+r = Rectangle(Vec2(270, 250), 100, 2, 0, 0, 0);
+rotateShape(r, -2.8);
+
+/*for(var i = 0; i < 10; i++){
+  r = Circle(Vec2(Math.random() * 800, Math.random() * 450 / 2-1000), Math.random() * 20 + 10, Math.random() * 30, Math.random() / 2, Math.random() / 2);
   rotateShape(r, Math.random() * 7);
-  r = Rectangle(Vec2(Math.random() * 800, Math.random() * 450 / 2), Math.random() * 20 + 10, Math.random() * 20 + 10, Math.random() * 30, Math.random() / 2, Math.random() / 2);
+  r = Rectangle(Vec2(Math.random() * 800, Math.random() * 450 / 2-1000), Math.random() * 20 + 10, Math.random() * 20 + 10, Math.random() * 30, Math.random() / 2, Math.random() / 2);
   rotateShape(r, Math.random() * 7);
-}
+}*/
+
 </script>
