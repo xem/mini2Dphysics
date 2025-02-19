@@ -62,7 +62,8 @@ var RigidShape = (C, mass, F, R, T, B, W, H, shape) => {
       Vec2(C.x + W / 2, C.y - H / 2),
       Vec2(C.x + W / 2, C.y + H / 2),
       Vec2(C.x - W / 2, C.y + H / 2)
-    ]
+    ],
+    P: 0 // Collision Group
   };
   
   // Prepare rectangle
@@ -482,7 +483,7 @@ setInterval(
     for(k = 9; k--;){
       for(i = objects.length; i--;){
         for(j = objects.length; j-- > i;){
-          
+          if (objects[i].P != objects[j].P && objects[i].M >0 && objects[j].M >0) continue;
           // Test bounds
           if(boundTest(objects[i], objects[j])){
             
@@ -520,6 +521,9 @@ setInterval(
       // ----
       
       c.save();
+
+       if (objects[i].P == 1) c.strokeStyle = "Gray";
+
       c.translate(objects[i].C.x, objects[i].C.y);
       c.rotate(objects[i].G);
       
@@ -586,7 +590,7 @@ var Rectangle = (center, width, height, mass, friction, restitution) => RigidSha
 // DEMO
 // ====
 
-/*
+
 r = Rectangle(Vec2(500, 200), 400, 20, 0, 1, .5);
 rotateShape(r, 2.8);
 Rectangle(Vec2(200, 400), 400, 20, 0, 1, .5);
@@ -596,10 +600,14 @@ Rectangle(Vec2(10, 360), 20, 100, 0, 1, .5);
 for(var i = 0; i < 30; i++){
   r = Circle(Vec2(Math.random() * 800, Math.random() * 450 / 2), Math.random() * 20 + 10, Math.random() * 30, Math.random() / 2, Math.random() / 2);
   rotateShape(r, Math.random() * 7);
+  //r.P = Math.round(Math.random())
+  r.P = 1
   r = Rectangle(Vec2(Math.random() * 800, Math.random() * 450 / 2), Math.random() * 20 + 10, Math.random() * 20 + 10, Math.random() * 30, Math.random() / 2, Math.random() / 2);
   rotateShape(r, Math.random() * 7);
+  //r.P = Math.round(Math.random())
+  r.P = 1
 }
-*/
+
 
 // JOINTS DEMO
 // ====
