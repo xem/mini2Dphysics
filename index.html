@@ -62,7 +62,8 @@ var RigidShape = (C, mass, F, R, T, B, W, H, shape) => {
       Vec2(C.x + W / 2, C.y - H / 2),
       Vec2(C.x + W / 2, C.y + H / 2),
       Vec2(C.x - W / 2, C.y + H / 2)
-    ]
+    ],
+    P: 0 // Collision Group
   };
   
   // Prepare rectangle
@@ -413,6 +414,64 @@ var resolveCollision = (s1, s2, collisionInfo) => {
   s2.v += R2crossT * jT * s2.I;
 };
 
+
+
+// JOINTS
+// ===============
+
+var joints = [];
+
+var DistanceJoint = (A, B, a, b, L, S = 1, D = 0.1) => ({
+  A, // bodyA
+  B, // bodyB
+  a, // anchorA - local anchor on bodyA (relative to bodyA's center)
+  b, // anchorB - local anchor on bodyB (relative to bodyB's center)
+  L, // length of the joint
+  S, // stiffness
+  D  // damping
+});
+
+var applyDistanceJoint = (joint) => {
+  // rotate anchor points relative coordinates to match objects rotation
+  // and convert them to world coordinates
+  var worldCoordsAnchorA = add(joint.A.C, rotate(joint.a, Vec2(0,0), joint.A.G)); // rotate and then translate by bodyA's position
+  var worldCoordsAnchorB = add(joint.B.C, rotate(joint.b,Vec2(0,0), joint.B.G)); // rotate and then translate by bodyB's position
+
+  // delta of world coords
+  // for distance and direction
+  var delta = substract(worldCoordsAnchorB, worldCoordsAnchorA);
+
+  // distance is length of delta
+  var dist = length(delta);
+
+  // error for Hooke's law
+  var error = dist - joint.L; 
+
+  // skip if error is very small
+  // meaning the desired length and current distance are close enough already, so we don't need to apply the forces
+  if (Math.abs(error) < 0.001) return;
+
+  // direction of force
+  var direction = normalize(delta);
+  // magnitude based on Hooke's law
+  var forceMagnitude = -joint.S * error;
+
+  // damping - correction based on current velocity
+  var relativeVelocity = substract(joint.B.V, joint.A.V);
+  var dampingForce = dot(relativeVelocity, direction) * joint.D;
+
+  // actual force over direction, considering magnitude and damping
+  var force = scale(direction, forceMagnitude - dampingForce);
+
+  // only apply forces to the bodies if they have a mass!
+  if (joint.A.M) joint.A.V = substract(joint.A.V, scale(force, joint.A.M));
+  if (joint.B.M) joint.B.V = add(joint.B.V, scale(force, joint.B.M));
+};
+
+
+
+// ===============
+
 // Loop
 setInterval(
   (i,j,k) => {
@@ -424,7 +483,7 @@ setInterval(
     for(k = 9; k--;){
       for(i = objects.length; i--;){
         for(j = objects.length; j-- > i;){
-          
+          if (objects[i].P != objects[j].P && objects[i].M >0 && objects[j].M >0) continue;
           // Test bounds
           if(boundTest(objects[i], objects[j])){
             
@@ -448,6 +507,12 @@ setInterval(
         }
       }
     }
+
+
+    // apply distance joints
+    for(i = joints.length; i--;){
+      applyDistanceJoint(joints[i])
+    }
   
     // Draw / Update scene
     for(i = objects.length; i--;){
@@ -456,6 +521,9 @@ setInterval(
       // ----
       
       c.save();
+
+       if (objects[i].P == 1) c.strokeStyle = "Gray";
+
       c.translate(objects[i].C.x, objects[i].C.y);
       c.rotate(objects[i].G);
       
@@ -481,6 +549,34 @@ setInterval(
       objects[i].v += objects[i].a * 1/60;
       rotateShape(objects[i], objects[i].v * 1/60);
     }
+
+
+    //Draw Joints
+    for(i = joints.length; i--;){
+      // rotate anchor points relative coordinates to match objects rotation (as in apply joints)
+      // then get world coordinates
+      let rotatedAnchorA = add(joints[i].A.C, rotate(joints[i].a,Vec2(0,0), joints[i].A.G));
+      let rotatedAnchorB = add(joints[i].B.C, rotate(joints[i].b,Vec2(0,0), joints[i].B.G));
+      
+      // the joint itself is in blue
+      c.strokeStyle = "blue";
+      c.beginPath();
+      c.moveTo(rotatedAnchorA.x, rotatedAnchorA.y);
+      c.lineTo(rotatedAnchorB.x, rotatedAnchorB.y);
+      c.stroke();
+      
+      // the distance between object center and its relative anchor point are in green
+      c.strokeStyle = "green";
+      c.beginPath();
+      c.moveTo(joints[i].A.C.x, joints[i].A.C.y);
+      c.lineTo(rotatedAnchorA.x, rotatedAnchorA.y);
+      c.stroke();
+      c.beginPath();
+      c.moveTo(joints[i].B.C.x, joints[i].B.C.y);
+      c.lineTo(rotatedAnchorB.x, rotatedAnchorB.y);
+      c.stroke();
+    }
+
   },
   16
 );
@@ -494,6 +590,7 @@ var Rectangle = (center, width, height, mass, friction, restitution) => RigidSha
 // DEMO
 // ====
 
+
 r = Rectangle(Vec2(500, 200), 400, 20, 0, 1, .5);
 rotateShape(r, 2.8);
 Rectangle(Vec2(200, 400), 400, 20, 0, 1, .5);
@@ -503,7 +600,56 @@ Rectangle(Vec2(10, 360), 20, 100, 0, 1, .5);
 for(var i = 0; i < 30; i++){
   r = Circle(Vec2(Math.random() * 800, Math.random() * 450 / 2), Math.random() * 20 + 10, Math.random() * 30, Math.random() / 2, Math.random() / 2);
   rotateShape(r, Math.random() * 7);
+  //r.P = Math.round(Math.random())
+  r.P = 1
   r = Rectangle(Vec2(Math.random() * 800, Math.random() * 450 / 2), Math.random() * 20 + 10, Math.random() * 20 + 10, Math.random() * 30, Math.random() / 2, Math.random() / 2);
   rotateShape(r, Math.random() * 7);
+  //r.P = Math.round(Math.random())
+  r.P = 1
 }
+
+
+// JOINTS DEMO
+// ====
+
+r = Rectangle(Vec2(500, 200), 400, 20, 0, 1, .5);
+rotateShape(r, 2.8);
+Rectangle(Vec2(200, 400), 400, 20, 0, 1, .5);
+base =Rectangle(Vec2(100, 200), 200, 20, 0, 1, .5);
+Rectangle(Vec2(10, 360), 20, 100, 0, 1, .5);
+
+r1 = Circle(Vec2(260, 100),20, 30, 1, 0.1);
+r2 = Circle(Vec2(280, 100),10, 30, 1, 0.1);
+r3 = Rectangle(Vec2(200, 100), 60, 30, 30, 1, 0.1);
+r4 = Rectangle(Vec2(230, 100), 30, 50, 30, 1, 0.1);
+r5 = Rectangle(Vec2(170, 80), 30, 50, 30, 1, 0.1);
+r6 = Rectangle(Vec2(170, 250), 30, 50, 30, 1, 0.1);
+r7 = Circle(Vec2(300, 100),10, 30, 1, 0.1);
+r8 = Circle(Vec2(320, 100),10, 30, 1, 0.1);
+
+joints.push(DistanceJoint(r3, r4, Vec2(0, 0), Vec2(0, 0), 31, 50, 0.1));
+joints.push(DistanceJoint(r3, r5, Vec2(-20, 10), Vec2(10, 0), 11, 50, 0.1));
+joints.push(DistanceJoint(r1, r2, Vec2(0, 0), Vec2(0, 0), 25, 50, 0.1));
+joints.push(DistanceJoint(r1, r4, Vec2(0, 0), Vec2(0, 0), 30, 50, 0.1));
+joints.push(DistanceJoint(r6, base, Vec2(0, -20), Vec2(70, 0), 30, 90, 0.1));
+joints.push(DistanceJoint(r2, r7, Vec2(0, 0), Vec2(0, 0), 15, 90, 0.1));
+joints.push(DistanceJoint(r7, r8, Vec2(0, 0), Vec2(0, 0), 15, 90, 0.1));
+
+a1 = Rectangle(Vec2(400, 50), 40, 100, 30, 1, 0.1);
+a2 = Rectangle(Vec2(460, 50), 40, 100, 30, 1, 0.1);
+s1 = Circle(Vec2(430, 20),10, 10, 1, 0.1);
+s2 = Circle(Vec2(430, 80),10, 10, 1, 0.1);
+a3 = Rectangle(Vec2(500, 50), 80, 60, 30, 1, 0.1);
+
+joints.push(DistanceJoint(a1, s1, Vec2(20, -30), Vec2(0, 0), 10, 100, 0.1))
+joints.push(DistanceJoint(a2, s1, Vec2(-20, -30), Vec2(0, 0), 10, 100, 0.1))
+joints.push(DistanceJoint(a1, s2, Vec2(15, 30), Vec2(0, 0), 10, 100, 0.1))
+joints.push(DistanceJoint(a2, s2, Vec2(-15, 30), Vec2(0, 0), 10, 100, 0.1))
+joints.push(DistanceJoint(s1, s2, Vec2(0, 0), Vec2(0, 0), 60, 100, 0.1))
+
+joints.push(DistanceJoint(a2, a3, Vec2(15, -25), Vec2(-35, -25), 10, 100, 0.1))
+joints.push(DistanceJoint(a2, a3, Vec2(15, 25), Vec2(-35, 25), 10, 100, 0.1))
+
+
+
 </script>
